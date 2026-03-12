@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Build output
+target/
+
+# Docs / 非运行时文件
+*.md
+docs/
+需求文档/
+
+# Scripts（SQL 需在数据库侧执行，不打包进镜像）
+scripts/
+
+# Test
+*.log
+.DS_Store

@@ -1,0 +1,3 @@
+# 部署脚本依赖（deploy.py）
+# 安装: pip install -r requirements-deploy.txt
+paramiko>=3.0.0

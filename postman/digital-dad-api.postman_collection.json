@@ -1,0 +1,973 @@
+{
+	"info": {
+		"_postman_id": "digital-dad-api-2024",
+		"name": "数字爸爸 API",
+		"description": "数字爸爸 - 婚礼采访与生成平台 API 测试用例\n\n使用说明：\n1. 先调用「认证-发送验证码」获取验证码\n2. 调用「认证-主持人登录」或「认证-超管登录」获取 token\n3. 将 token 保存到 collection 变量 token 中（登录接口的 Tests 脚本已自动处理）\n4. 需认证接口会自动使用 Authorization: Bearer {{token}}",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{"key": "baseUrl", "value": "http://101.34.64.224:8080"},
+		{"key": "token", "value": ""},
+		{"key": "adminToken", "value": ""},
+		{"key": "projectId", "value": "1"},
+		{"key": "sessionId", "value": "1"},
+		{"key": "participantId", "value": "1"},
+		{"key": "messageId", "value": "1"},
+		{"key": "summaryId", "value": "1"},
+		{"key": "itemId", "value": "1"},
+		{"key": "personId", "value": "1"},
+		{"key": "deliverableId", "value": "1"},
+		{"key": "templateId", "value": "1"},
+		{"key": "versionId", "value": "1"},
+		{"key": "sceneId", "value": "1"},
+		{"key": "hostId", "value": "1"},
+		{"key": "shareToken", "value": "your-share-token"},
+		{"key": "phone", "value": "13800138000"}
+	],
+	"item": [
+		{
+			"name": "公共",
+			"item": [
+				{
+					"name": "根路径-服务状态",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/"
+					}
+				},
+				{
+					"name": "健康检查",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/health"
+					}
+				}
+			]
+		},
+		{
+			"name": "认证",
+			"item": [
+				{
+					"name": "发送验证码",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/send-code"
+					}
+				},
+				{
+					"name": "主持人登录",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": ["var json = pm.response.json(); if (json.data && json.data.token) { pm.collectionVariables.set('token', json.data.token); }"],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"123456\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login"
+					}
+				},
+				{
+					"name": "主持人-当前用户",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/auth/me"
+					}
+				},
+				{
+					"name": "主持人-退出登录",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/auth/logout"
+					}
+				},
+				{
+					"name": "超管登录",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": ["var json = pm.response.json(); if (json.data && json.data.token) { pm.collectionVariables.set('adminToken', json.data.token); }"],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"123456\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/auth/login"
+					}
+				},
+				{
+					"name": "超管-当前用户",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/auth/me"
+					}
+				}
+			]
+		},
+		{
+			"name": "C端-入口(免认证)",
+			"item": [
+				{
+					"name": "扫码入口-获取项目信息",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/c/entry/{{shareToken}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "C端-绑定与会话",
+			"item": [
+				{
+					"name": "绑定参与者",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"GROOM\"\n}"
+						},
+						"url": "{{baseUrl}}/api/c/projects/{{projectId}}/bind"
+					}
+				},
+				{
+					"name": "创建/恢复会话",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"participantId\": {{participantId}}\n}"
+						},
+						"url": "{{baseUrl}}/api/c/sessions"
+					}
+				},
+				{
+					"name": "获取会话",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}"
+					}
+				},
+				{
+					"name": "获取消息列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/messages"
+					}
+				},
+				{
+					"name": "发送消息",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"测试消息内容\",\n  \"audioUrl\": null,\n  \"transcriptText\": null\n}"
+						},
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/messages"
+					}
+				},
+				{
+					"name": "更新消息",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"更新后的内容\"\n}"
+						},
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/messages/{{messageId}}"
+					}
+				},
+				{
+					"name": "删除消息",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/messages/{{messageId}}"
+					}
+				},
+				{
+					"name": "提交会话",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/submit"
+					}
+				}
+			]
+		},
+		{
+			"name": "C端-小结",
+			"item": [
+				{
+					"name": "创建小结",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/summaries"
+					}
+				},
+				{
+					"name": "获取当前小结",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/summaries/current"
+					}
+				},
+				{
+					"name": "获取小结详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}"
+					}
+				},
+				{
+					"name": "添加小结条目",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"事实内容\",\n  \"itemType\": \"FACT\"\n}"
+						},
+						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}/items"
+					}
+				},
+				{
+					"name": "更新小结条目",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"更新内容\",\n  \"itemType\": \"FACT\",\n  \"isSelected\": true\n}"
+						},
+						"url": "{{baseUrl}}/api/c/summary-items/{{itemId}}"
+					}
+				},
+				{
+					"name": "删除小结条目",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/summary-items/{{itemId}}"
+					}
+				},
+				{
+					"name": "确认小结",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}/confirm"
+					}
+				}
+			]
+		},
+		{
+			"name": "C端-故事与人物",
+			"item": [
+				{
+					"name": "创建故事",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/stories"
+					}
+				},
+				{
+					"name": "获取故事",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/stories?projectBoardId=1"
+					}
+				},
+				{
+					"name": "获取关键人物列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/persons"
+					}
+				},
+				{
+					"name": "添加关键人物",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"新郎父亲\",\n  \"roleLabel\": \"家人\"\n}"
+						},
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/persons"
+					}
+				},
+				{
+					"name": "更新关键人物",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"新郎父亲(更新)\",\n  \"roleLabel\": \"家人\"\n}"
+						},
+						"url": "{{baseUrl}}/api/c/key-persons/{{personId}}"
+					}
+				},
+				{
+					"name": "删除关键人物",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/key-persons/{{personId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "主持人B端-项目",
+			"item": [
+				{
+					"name": "创建项目",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"groomName\": \"张先生\",\n  \"brideName\": \"李女士\",\n  \"weddingDate\": \"2025-06-01\"\n}"
+						},
+						"url": "{{baseUrl}}/api/b/projects"
+					}
+				},
+				{
+					"name": "项目列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/projects?page=1&size=10"
+					}
+				},
+				{
+					"name": "项目详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}"
+					}
+				},
+				{
+					"name": "获取分享入口",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/share"
+					}
+				}
+			]
+		},
+		{
+			"name": "主持人B端-板块",
+			"item": [
+				{
+					"name": "板块列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards"
+					}
+				},
+				{
+					"name": "添加板块",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"boardMetaId\": 1,\n  \"displayOrder\": 0\n}"
+						},
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards"
+					}
+				},
+				{
+					"name": "更新板块",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"displayOrder\": 1\n}"
+						},
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards/1"
+					}
+				},
+				{
+					"name": "删除板块",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards/1"
+					}
+				},
+				{
+					"name": "板块元数据-启用列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/board-meta/enabled"
+					}
+				}
+			]
+		},
+		{
+			"name": "主持人B端-交付物",
+			"item": [
+				{
+					"name": "生成交付物",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"contentType\": \"OPENING_SPEECH\"\n}"
+						},
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/deliverables/generate"
+					}
+				},
+				{
+					"name": "按类型获取交付物",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/deliverables/OPENING_SPEECH"
+					}
+				},
+				{
+					"name": "按ID获取交付物",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/deliverables/{{deliverableId}}"
+					}
+				},
+				{
+					"name": "更新交付物",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"婚礼开场白\",\n  \"content\": \"尊敬的各位来宾...\"\n}"
+						},
+						"url": "{{baseUrl}}/api/b/deliverables/{{deliverableId}}"
+					}
+				},
+				{
+					"name": "删除交付物",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/deliverables/{{deliverableId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "主持人B端-用户",
+			"item": [
+				{
+					"name": "我的资料",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/b/users/me"
+					}
+				},
+				{
+					"name": "更新我的资料",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"主持人张三\",\n  \"phone\": \"13800138000\",\n  \"contactVisible\": \"HIDDEN\"\n}"
+						},
+						"url": "{{baseUrl}}/api/b/users/me"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-主持人管理",
+			"item": [
+				{
+					"name": "主持人列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/hosts?page=1&size=10"
+					}
+				},
+				{
+					"name": "创建主持人",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"13900139000\",\n  \"name\": \"新主持人\",\n  \"initialQuota\": 10\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/hosts"
+					}
+				},
+				{
+					"name": "主持人详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}"
+					}
+				},
+				{
+					"name": "更新主持人状态",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/status"
+					}
+				},
+				{
+					"name": "开通会员",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"packageCode\": \"annual\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/activate-member"
+					}
+				},
+				{
+					"name": "调整配额",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": 10,\n  \"reason\": \"活动赠送\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/quota"
+					}
+				},
+				{
+					"name": "配额流水",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/quota-flows?page=1&size=10"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-项目管理",
+			"item": [
+				{
+					"name": "项目列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/projects?page=1&size=10"
+					}
+				},
+				{
+					"name": "项目详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/projects/{{projectId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-板块元数据",
+			"item": [
+				{
+					"name": "板块元数据列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/board-meta"
+					}
+				},
+				{
+					"name": "板块元数据详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/board-meta/1"
+					}
+				},
+				{
+					"name": "创建板块元数据",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"wedding_intro\",\n  \"name\": \"婚礼介绍\",\n  \"displayOrder\": 0,\n  \"description\": \"婚礼开场介绍\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/board-meta"
+					}
+				},
+				{
+					"name": "更新板块元数据",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"婚礼介绍(更新)\",\n  \"displayOrder\": 1,\n  \"description\": \"更新描述\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/board-meta/1"
+					}
+				},
+				{
+					"name": "删除板块元数据",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/board-meta/1"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-提示词",
+			"item": [
+				{
+					"name": "按场景获取提示词",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompts/scene/WEDDING_INTRO"
+					}
+				},
+				{
+					"name": "按场景获取合并内容",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompts/scene/WEDDING_INTRO/combined"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-提示词模板",
+			"item": [
+				{
+					"name": "模板列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates?contentType=TEXT"
+					}
+				},
+				{
+					"name": "模板详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}"
+					}
+				},
+				{
+					"name": "创建模板",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"opening_template\",\n  \"name\": \"开场白模板\",\n  \"contentType\": \"TEXT\",\n  \"description\": \"婚礼开场白\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-templates"
+					}
+				},
+				{
+					"name": "更新模板",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"开场白模板(更新)\",\n  \"contentType\": \"TEXT\",\n  \"description\": \"更新描述\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}"
+					}
+				},
+				{
+					"name": "删除模板",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-提示词版本",
+			"item": [
+				{
+					"name": "版本列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions"
+					}
+				},
+				{
+					"name": "版本详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions/{{versionId}}"
+					}
+				},
+				{
+					"name": "创建版本",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"版本内容\",\n  \"setActive\": true\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions"
+					}
+				},
+				{
+					"name": "激活版本",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions/{{versionId}}/activate"
+					}
+				},
+				{
+					"name": "删除版本",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions/{{versionId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-提示词场景",
+			"item": [
+				{
+					"name": "场景列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-scenes?scope=GLOBAL"
+					}
+				},
+				{
+					"name": "场景详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/{{sceneId}}"
+					}
+				},
+				{
+					"name": "创建场景",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"wedding_intro\",\n  \"name\": \"婚礼介绍\",\n  \"scope\": \"GLOBAL\",\n  \"boardCode\": null,\n  \"roleType\": null,\n  \"description\": \"婚礼介绍场景\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-scenes"
+					}
+				},
+				{
+					"name": "更新场景",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"婚礼介绍(更新)\",\n  \"boardCode\": null,\n  \"roleType\": null,\n  \"description\": \"更新描述\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/{{sceneId}}"
+					}
+				},
+				{
+					"name": "删除场景",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/{{sceneId}}"
+					}
+				},
+				{
+					"name": "添加场景项",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"templateId\": {{templateId}},\n  \"displayOrder\": 0,\n  \"usageMode\": \"APPEND\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/{{sceneId}}/items"
+					}
+				},
+				{
+					"name": "更新场景项",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"displayOrder\": 1,\n  \"usageMode\": \"APPEND\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/items/1"
+					}
+				},
+				{
+					"name": "删除场景项",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/items/1"
+					}
+				}
+			]
+		}
+	]
+}

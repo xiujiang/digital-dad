@@ -1,0 +1,11 @@
+ • 数据库：digital_dad（Java 项目用）
+  地址：101.34.64.224:3306
+  • 用户名 / 密码：digital_dad / digital_dad
+  • Root 密码：Root@DigitalDad2025（自定义，请自行保管）
+  • 其它：端口 3306、utf8mb4、时区 Asia/Shanghai、数据卷 mysql-data、重启策略 always、网络 java-mysql-network 均保留
+
+
+
+项目启动：
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot"
+.\mvnw.cmd spring-boot:run

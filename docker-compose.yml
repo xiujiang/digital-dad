@@ -1,0 +1,20 @@
+# ============================================================
+# 数字爸爸 - Docker Compose 编排
+# ============================================================
+# 数据库等配置见 application.yml，构建时已打包进镜像
+# 如需覆盖（如 APP_BASE_URL 生产域名），可设置环境变量
+# ============================================================
+
+version: "3.8"
+
+services:
+  app:
+    build: .
+    image: digital-dad:latest
+    container_name: digital-dad-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    # 生产环境：覆盖 app.base-url（分享链接、二维码 base）
+    environment:
+      APP_BASE_URL: http://101.34.64.224:8080

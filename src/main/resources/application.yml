@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: digital-dad
+
+  datasource:
+    url: jdbc:mysql://101.34.64.224:3306/digital_dad?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: digital_dad
+    password: digital_dad
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+
+# JWT 配置
+jwt:
+  secret: digital-dad-jwt-secret-key-at-least-256-bits-for-hs256
+  expiration-seconds: 86400  # 24小时
+  header: Authorization
+  prefix: "Bearer "
+
+# 短信验证码配置
+sms:
+  code-expire-seconds: 300   # 5分钟
+  send-interval-seconds: 60  # 60秒内不可重复获取
+
+# 应用配置
+app:
+  base-url: http://localhost:8080  # C端分享链接、二维码 base，生产环境需改为实际域名
+  ai:
+    enabled: ${APP_AI_ENABLED:true}  # 是否启用真实 AI，默认 true
+  # DeepSeek 大模型（通过环境变量覆盖，勿提交敏感信息）
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:sk-6d007cb3e5b44932a98a9fb6b8374516}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
+  # 火山引擎语音识别（通过环境变量覆盖）
+  volcengine:
+    app-id: ${VOLCENGINE_APP_ID:7567124792}
+    access-token: ${VOLCENGINE_ACCESS_TOKEN:E1htMsq5k0vwNgxK59R6fFCumLF7vDp5}
+    resource-id: volc.seedasr.sauc.duration  # 豆包流式语音识别模型2.0-小时版
+    ws-url: wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async
+
+server:
+  port: 8080
