@@ -83,6 +83,7 @@ public class ProjectService {
         project.setGroomName(request.getGroomName());
         project.setBrideName(request.getBrideName());
         project.setWeddingDate(request.getWeddingDate());
+        project.setTheme(request.getTheme());
         project.setShareToken(shareToken);
         project = projectRepository.save(project);
 
@@ -127,6 +128,7 @@ public class ProjectService {
                 .groomName(project.getGroomName())
                 .brideName(project.getBrideName())
                 .weddingDate(project.getWeddingDate())
+                .theme(project.getTheme())
                 .status(project.getStatus().name())
                 .shareToken(project.getShareToken())
                 .participants(participantSummaries)
@@ -136,7 +138,7 @@ public class ProjectService {
     }
 
     /**
-     * 分享入口
+     * 分享入口（校验项目归属）
      */
     public ShareEntryResponse getShareEntry(Long projectId, Long hostUserId) {
         Project project = projectRepository.findByIdAndDeletedAtIsNull(projectId)
@@ -144,7 +146,19 @@ public class ProjectService {
         if (!project.getHostUserId().equals(hostUserId)) {
             throw new BusinessException(403, "无权限访问该项目");
         }
+        return buildShareEntryResponse(project);
+    }
 
+    /**
+     * 分享入口（超管可查任意项目）
+     */
+    public ShareEntryResponse getShareEntryForAdmin(Long projectId) {
+        Project project = projectRepository.findByIdAndDeletedAtIsNull(projectId)
+                .orElseThrow(() -> new BusinessException(404, "项目不存在"));
+        return buildShareEntryResponse(project);
+    }
+
+    private ShareEntryResponse buildShareEntryResponse(Project project) {
         String entryUrl = baseUrl + "/c/entry/" + project.getShareToken();
         return ShareEntryResponse.builder()
                 .projectId(project.getId())
@@ -156,16 +170,31 @@ public class ProjectService {
 
     /**
      * 根据 share_token 获取项目信息（C 端扫码进入用）
+     * <p>含 roleOptions：可选角色由后端返回（新郎/新娘及是否已被占用），前端按此渲染选择身份页。</p>
      */
     public ProjectInfoResponse getProjectInfoByToken(String shareToken) {
         Project project = projectRepository.findByShareTokenAndDeletedAtIsNull(shareToken)
                 .orElseThrow(() -> new BusinessException(404, "链接无效或已过期"));
+        List<EntryRoleOption> roleOptions = List.of(
+                EntryRoleOption.builder()
+                        .role(ParticipantRole.GROOM.name())
+                        .label("新郎")
+                        .available(!participantRepository.existsByProjectIdAndRoleType(project.getId(), ParticipantRole.GROOM))
+                        .build(),
+                EntryRoleOption.builder()
+                        .role(ParticipantRole.BRIDE.name())
+                        .label("新娘")
+                        .available(!participantRepository.existsByProjectIdAndRoleType(project.getId(), ParticipantRole.BRIDE))
+                        .build()
+        );
         return ProjectInfoResponse.builder()
                 .projectId(project.getId())
                 .groomName(project.getGroomName())
                 .brideName(project.getBrideName())
                 .weddingDate(project.getWeddingDate())
+                .theme(project.getTheme())
                 .shareToken(shareToken)
+                .roleOptions(roleOptions)
                 .build();
     }
 
@@ -227,6 +256,7 @@ public class ProjectService {
                 .groomName(project.getGroomName())
                 .brideName(project.getBrideName())
                 .weddingDate(project.getWeddingDate())
+                .theme(project.getTheme())
                 .status(project.getStatus().name())
                 .shareToken(project.getShareToken())
                 .createdAt(project.getCreatedAt())
@@ -246,6 +276,7 @@ public class ProjectService {
                 .groomName(p.getGroomName())
                 .brideName(p.getBrideName())
                 .weddingDate(p.getWeddingDate())
+                .theme(p.getTheme())
                 .status(p.getStatus().name())
                 .createdAt(p.getCreatedAt())
                 .hostUserId(p.getHostUserId())
@@ -261,6 +292,7 @@ public class ProjectService {
                 .groomName(p.getGroomName())
                 .brideName(p.getBrideName())
                 .weddingDate(p.getWeddingDate())
+                .theme(p.getTheme())
                 .status(p.getStatus().name())
                 .createdAt(p.getCreatedAt())
                 .build();

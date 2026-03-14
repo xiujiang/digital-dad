@@ -8,7 +8,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * 场景与模板绑定（某场景用哪些模板、顺序）
+ * 场景与提示词绑定（某场景用哪些提示词 code、顺序）
  */
 @Getter
 @Setter
@@ -23,8 +23,8 @@ public class PromptSceneItem {
     @Column(name = "scene_id", nullable = false)
     private Long sceneId;
 
-    @Column(name = "template_id", nullable = false)
-    private Long templateId;
+    @Column(name = "prompt_code", nullable = false, length = 64)
+    private String promptCode;
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;

@@ -2,12 +2,28 @@
 
 数字爸爸 - 婚礼采访与生成平台接口说明。
 
-**使用说明：**
-1. 先调用「认证 - 发送验证码」获取验证码。
-2. 调用「认证 - 主持人登录」或「认证 - 超管登录」获取 token。
+---
+
+## 使用说明与路径约定
+
+**调用流程：**
+1. **主持人/超管**：调用「认证 - 发送验证码」获取验证码，再调用「认证 - 登录」（或「密码登录」），通过请求体 `admin` 区分身份，获取 token。
+2. **C 端（微信小程序）**：调用「认证 - 微信小程序登录」，传入小程序 `wx.login()` 得到的 `code`，后端换 openid 后签发 token。
 3. 需认证的接口在请求头中携带：`Authorization: Bearer <token>`。
 
 **基础地址：** `{{baseUrl}}`（示例：`http://101.34.64.224:8080`）
+
+**路径与角色约定（合并后）：**
+
+| 路径前缀 | 说明 | 鉴权 |
+|----------|------|------|
+| `/api/auth` | 认证（登录、/me、退出、发码） | 登录/发码免认证；/me、logout 需已登录 |
+| `/api/c/*` | C 端（参与者：绑定、会话、消息、小结、故事、人物） | 需登录（C 端身份） |
+| `/api/projects` | 项目及项目下板块、交付物 | 主持人 + 超管（HOST 仅本人，SUPER_ADMIN 全部/任意） |
+| `/api/board-meta` | 板块元数据 | 主持人 + 超管（列表：HOST 仅启用，SUPER_ADMIN 全部；增删改仅超管） |
+| `/api/users` | 当前用户资料、用户/主持人管理 | /me 共用；列表、详情、状态、会员、配额等仅超管 |
+| `/api/deliverables` | 交付物按 ID 查/改/删 | 主持人 + 超管（项目归属或超管） |
+| `/api/admin/*` | 提示词、语音配额等仅超管能力 | 仅超管 |
 
 **通用响应结构（所有接口均包装为此格式）：**
 
@@ -109,9 +125,9 @@
 
 ---
 
-### 2.2 主持人登录
+### 2.2 登录（主持人 / 超管共用）
 
-**接口含义：** 主持人使用手机号 + 验证码登录，返回访问令牌（token），用于后续主持人端与 C 端接口鉴权。
+**接口含义：** 使用手机号 + 验证码登录，返回访问令牌（token）。通过请求体中的 `admin` 区分身份：不传或 `false` 为主持人登录（未注册则自动注册并赋 HOST）；`true` 为超管登录（须具备 SUPER_ADMIN 角色）。
 
 | 项目 | 说明 |
 |------|------|
@@ -130,12 +146,22 @@
 |--------|------|------|------|
 | phone | string | 是 | 手机号，格式同发送验证码 |
 | code | string | 是 | 6 位数字验证码 |
+| admin | boolean | 否 | 默认 false。true 表示超管登录，该手机号须已具备 SUPER_ADMIN 角色 |
 
-**请求示例：**
+**请求示例（主持人）：**
 ```json
 {
   "phone": "13800138000",
   "code": "123456"
+}
+```
+
+**请求示例（超管）：**
+```json
+{
+  "phone": "13800138000",
+  "code": "123456",
+  "admin": true
 }
 ```
 
@@ -145,7 +171,8 @@
 |------|------|------|
 | token | string | JWT 访问令牌，后续请求需在 Header 中携带 `Authorization: Bearer <token>` |
 | userId | number | 当前登录用户的用户 ID |
-| userType | string | 用户类型，如 HOST（主持人） |
+| userType | string | 主角色，如 HOST、SUPER_ADMIN |
+| roles | string[] | 角色列表 |
 | name | string | 用户姓名/昵称 |
 | phone | string | 用户手机号 |
 
@@ -158,6 +185,7 @@
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "userId": 1,
     "userType": "HOST",
+    "roles": ["HOST"],
     "name": "主持人昵称",
     "phone": "13800138000"
   }
@@ -166,15 +194,88 @@
 
 ---
 
-### 2.3 主持人 - 当前用户
+### 2.3 密码登录（主持人 / 超管）
 
-**接口含义：** 根据当前 token 获取主持人当前登录用户信息。
+**接口含义：** 使用手机号 + 密码登录。须已通过验证码登录并设置过密码；超管须具备 SUPER_ADMIN 角色。
+
+| 项目 | 说明 |
+|------|------|
+| 方法 | `POST` |
+| 路径 | `/api/auth/login-password` |
+| 认证 | 否 |
+| Content-Type | `application/json` |
+
+**请求体（JSON）：**
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| phone | string | 是 | 手机号 |
+| password | string | 是 | 密码 |
+| admin | boolean | 否 | 默认 false；true 为超管登录 |
+
+**响应体（data）：** 与「2.2 登录」相同（token、userId、userType、roles、name、phone）。
+
+---
+
+### 2.4 微信小程序登录
+
+**接口含义：** C 端小程序将 `wx.login()` 得到的临时 code 发到后端，后端用 code 调微信 code2session 换 openid，查/建用户后签发 JWT。响应与手机号登录结构一致（userType 可能为 WECHAT_USER，phone 可能为 null）。
+
+| 项目 | 说明 |
+|------|------|
+| 方法 | `POST` |
+| 路径 | `/api/auth/wechat-login` |
+| 认证 | 否 |
+| Content-Type | `application/json` |
+
+**请求体（JSON）：**
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| code | string | 是 | 小程序 wx.login() 返回的临时登录凭证 |
+
+**请求示例：**
+```json
+{
+  "code": "0x1a2b3c..."
+}
+```
+
+**响应体（data）：** 与「2.2 登录」相同（token、userId、userType、roles、name、phone）。未配置小程序 appId/appSecret 时返回 503「微信登录未配置」。
+
+---
+
+### 2.5 设置密码（需已登录）
+
+**接口含义：** 首次设置或修改密码。首次可不填 oldPassword；修改时须填原密码。
+
+| 项目 | 说明 |
+|------|------|
+| 方法 | `POST` |
+| 路径 | `/api/auth/set-password` |
+| 认证 | 是 |
+| Content-Type | `application/json` |
+
+**请求体（JSON）：**
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| newPassword | string | 是 | 新密码 |
+| oldPassword | string | 否 | 原密码（修改时必填） |
+
+**响应体：** 成功时 code 为 200，data 为 null。
+
+---
+
+### 2.6 当前用户（主持人 / 超管共用）
+
+**接口含义：** 根据当前 token 获取当前登录用户信息，主持人与超管均调用此接口，响应中的 `userType`、`roles` 用于区分身份。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
 | 路径 | `/api/auth/me` |
-| 认证 | 是（主持人 token） |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -188,22 +289,23 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | userId | number | 当前登录用户的用户 ID |
-| userType | string | 用户类型，如 HOST（主持人） |
+| userType | string | 主角色，如 HOST、SUPER_ADMIN |
+| roles | string[] | 角色列表 |
 | name | string | 用户姓名/昵称 |
 | phone | string | 用户手机号 |
 | avatarUrl | string | 用户头像 URL，可能为空 |
 
 ---
 
-### 2.4 主持人 - 退出登录
+### 2.7 退出登录
 
-**接口含义：** 主持人主动退出登录，使当前 token 失效（若服务端实现 token 黑名单）。
+**接口含义：** 主动退出登录，使当前 token 失效（若服务端实现 token 黑名单）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
 | 路径 | `/api/auth/logout` |
-| 认证 | 是（主持人 token） |
+| 认证 | 是 |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -216,71 +318,16 @@
 
 ---
 
-### 2.5 超管登录
-
-**接口含义：** 超管使用手机号 + 验证码登录，返回超管专用 token，用于所有超管后台接口。
-
-| 项目 | 说明 |
-|------|------|
-| 方法 | `POST` |
-| 路径 | `/api/admin/auth/login` |
-| 认证 | 否 |
-| Content-Type | `application/json` |
-
-**请求**
-
-- **路径参数：** 无  
-- **Query 参数：** 无  
-- **请求体（JSON）：**
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| phone | string | 是 | 手机号，格式同发送验证码 |
-| code | string | 是 | 6 位数字验证码 |
-
-**请求示例：**
-```json
-{
-  "phone": "13800138000",
-  "code": "123456"
-}
-```
-
-**响应体（data 结构与「主持人登录」一致）：** `data` 中 `token` 用作超管接口的 `Authorization: Bearer {{adminToken}}`；`userType` 为超管类型。字段含义同 2.2 主持人登录的 data 表格。
-
----
-
-### 2.6 超管 - 当前用户
-
-**接口含义：** 根据当前超管 token 获取超管当前登录用户信息。
-
-| 项目 | 说明 |
-|------|------|
-| 方法 | `GET` |
-| 路径 | `/api/admin/auth/me` |
-| 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
-
-**请求**
-
-- **路径参数：** 无  
-- **Query 参数：** 无  
-- **请求体：** 无  
-
-**响应体（data 为当前超管用户信息对象）：** 字段与「2.3 主持人 - 当前用户」的 data 相同（userId、userType、name、phone、avatarUrl），其中 userType 为超管类型。
-
----
-
 ## 三、C 端 - 入口（免认证）
 
 ### 3.1 扫码入口 - 获取项目信息
 
-**接口含义：** 用户通过分享链接/扫码进入时，凭分享 token 获取项目基本信息（如婚礼名称、新人姓名等），无需登录。
+**接口含义：** 用户通过分享链接/扫码进入时，凭分享 token 获取项目基本信息及**可选角色列表（roleOptions）**，无需登录。选择身份页由后端返回的 roleOptions 渲染。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/c/entry/{shareToken}` |
+| 路径 | `/api/c/entry/{token}` |
 | 认证 | 否 |
 
 **请求**
@@ -289,7 +336,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| shareToken | string | 是 | 项目分享 token，由「获取分享入口」接口得到 |
+| token | string | 是 | 项目分享 token（即 shareToken），由「获取分享入口」接口得到 |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -302,13 +349,23 @@
 | shareToken | string | 当前项目对应的分享令牌（与入口 URL 中一致） |
 | groomName | string | 新郎姓名 |
 | brideName | string | 新娘姓名 |
+| theme | string | 婚礼主题，可为空 |
 | weddingDate | string | 婚期，日期格式如 "2025-06-01" |
+| roleOptions | array | **由后端返回的可选角色列表**，供前端渲染「选择身份」；每项见下表 |
+
+**roleOptions 数组中每个元素：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| role | string | 角色枚举，如 GROOM、BRIDE |
+| label | string | 展示名称，如 新郎、新娘 |
+| available | boolean | 是否可选：true=未被占用可点选，false=已被占用仅展示 |
 
 ---
 
 ## 四、C 端 - 绑定与会话
 
-以下接口均需**主持人 token**（即主持人登录后获得的 token，用于代表“当前访问者”的会话与权限）。
+以下接口为 **`/api/c/*`**，均需**登录**（C 端参与者 token，即用户绑定参与者后用于会话、消息、小结等）。
 
 ### 4.1 绑定参与者
 
@@ -318,7 +375,7 @@
 |------|------|
 | 方法 | `POST` |
 | 路径 | `/api/c/projects/{projectId}/bind` |
-| 认证 | 是（主持人 token） |
+| 认证 | 是（登录 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -327,7 +384,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| projectId | number | 是 | 项目 ID |
+| projectId | number | 是 | 项目 ID（来自 C 端入口项目信息） |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -354,7 +411,24 @@
 
 ---
 
-### 4.2 创建 / 恢复会话
+### 4.2 获取语音转写配额（C 端）
+
+**接口含义：** 获取当前登录用户的语音转写剩余秒数与已使用秒数，用于 C 端语音识别功能展示。
+
+| 项目 | 说明 |
+|------|------|
+| 方法 | `GET` |
+| 路径 | `/api/c/speech-quota` |
+| 认证 | 是（C 端 token） |
+| Header | `Authorization: Bearer {{token}}` |
+
+**请求**：无路径/Query/体。
+
+**响应体（data）：** 含 `remainingSeconds`、`totalUsedSeconds` 等（以实际 DTO 为准）。
+
+---
+
+### 4.3 创建 / 恢复会话
 
 **接口含义：** 为当前用户（已绑定参与者）创建新会话，或恢复已有未提交会话；返回会话 ID 供后续消息、小结等使用。
 
@@ -362,7 +436,7 @@
 |------|------|
 | 方法 | `POST` |
 | 路径 | `/api/c/sessions` |
-| 认证 | 是（主持人 token） |
+| 认证 | 是（C 端 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -1062,9 +1136,9 @@
 
 ---
 
-## 七、主持人 B 端 - 项目
+## 七、项目（主持人 / 超管共用）
 
-以下接口需**主持人 token**（`Authorization: Bearer {{token}}`）。
+以下接口路径为 **`/api/projects`**。主持人（HOST）仅能操作本人项目；超管（SUPER_ADMIN）可查全部项目、任意项目详情与分享入口。需认证：`Authorization: Bearer {{token}}`。
 
 ### 7.1 创建项目
 
@@ -1073,8 +1147,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/b/projects` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -1104,13 +1178,13 @@
 
 ### 7.2 项目列表
 
-**接口含义：** 分页查询当前主持人名下的项目列表。
+**接口含义：** 分页查询项目列表。主持人返回本人项目；超管可传 `hostUserId`、`status`、`keyword` 等筛选查全部。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/projects` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1122,10 +1196,13 @@
 |--------|------|------|------|
 | page | number | 否 | 页码，从 1 开始，默认 1 |
 | size | number | 否 | 每页条数，默认 10 |
+| hostUserId | number | 否 | **仅超管**：按主持人 ID 筛选 |
+| status | string | 否 | **仅超管**：项目状态 |
+| keyword | string | 否 | **仅超管**：关键词（新人姓名、项目编号） |
 
 - **请求体：** 无  
 
-**响应体（data 为分页对象）：** 遵循文档开头的「分页响应」结构；`content` 中每项为项目列表项，结构见下表。
+**响应体（data 为分页对象）：** 遵循文档开头的「分页响应」结构。主持人：`content` 为项目列表项；超管：`content` 为含 hostName、hostPhone 等的列表项。结构见下表。
 
 **content 数组中每个元素：**
 
@@ -1143,13 +1220,13 @@
 
 ### 7.3 项目详情
 
-**接口含义：** 根据项目 ID 查询项目详情。
+**接口含义：** 根据项目 ID 查询项目详情。主持人仅能查本人项目；超管可查任意项目（返回含 hostUserId、hostName、hostPhone）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/projects/{projectId}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{id}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1158,7 +1235,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| projectId | number | 是 | 项目 ID |
+| id | number | 是 | 项目 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -1208,13 +1285,13 @@
 
 ### 7.4 获取分享入口
 
-**接口含义：** 获取该项目的分享链接所需 token（或短链），用于 C 端「扫码入口 - 获取项目信息」。
+**接口含义：** 获取该项目的分享链接所需 token（或短链），用于 C 端「扫码入口 - 获取项目信息」。主持人仅本人项目；超管可查任意项目。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/projects/{projectId}/share` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{id}/share` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1223,7 +1300,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| projectId | number | 是 | 项目 ID |
+| id | number | 是 | 项目 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -1232,15 +1309,16 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| shareUrl | string | 完整分享链接（可直接复制分享） |
+| projectId | number | 项目 ID |
+| shareToken | string | 分享令牌，C 端「扫码入口 - 获取项目信息」接口的路径参数即此值 |
 | entryUrl | string | C 端扫码/点击进入的入口 URL |
 | qrCodeUrl | string | 二维码图片 URL，用于生成二维码供扫码 |
-| shareToken | string | 分享令牌，C 端「扫码入口 - 获取项目信息」接口的路径参数即此值 |
-| projectId | number | 项目 ID |
 
 ---
 
-## 八、主持人 B 端 - 板块
+## 八、项目下板块（主持人 / 超管）
+
+以下为 **`/api/projects/{projectId}/boards`**，主持人仅能操作本人项目；超管可按需开放。需认证。
 
 ### 8.1 板块列表
 
@@ -1249,8 +1327,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/projects/{projectId}/boards` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{projectId}/boards` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1285,8 +1363,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/b/projects/{projectId}/boards` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{projectId}/boards` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -1324,8 +1402,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/b/projects/{projectId}/boards/{projectBoardId}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{projectId}/boards/{projectBoardId}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -1362,8 +1440,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `DELETE` |
-| 路径 | `/api/b/projects/{projectId}/boards/{projectBoardId}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{projectId}/boards/{projectBoardId}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1382,15 +1460,15 @@
 
 ---
 
-### 8.5 板块元数据 - 启用列表
+### 8.5 板块元数据（统一路径）
 
-**接口含义：** 获取系统中已启用的板块元数据列表，用于「添加板块」时选择 boardMetaId。
+**接口含义：** 板块元数据统一为 **`/api/board-meta`**。`GET /api/board-meta`：主持人仅返回已启用列表，超管返回全部；`GET /api/board-meta/enabled` 仅返回已启用；增删改仅超管。详见「十三、板块元数据」。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/board-meta/enabled` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/board-meta` 或 `/api/board-meta/enabled` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1399,11 +1477,11 @@
 - **Query 参数：** 无  
 - **请求体：** 无  
 
-**响应体（data 为板块元数据对象数组）：** 每项含 id、code、name、displayOrder、description、status 等，结构同「十三、超管 - 板块元数据」中单条元数据，仅返回已启用（status=ENABLED）的元数据。
+**响应体（data 为板块元数据对象数组）：** 每项含 id、code、name、displayOrder、description、status 等；主持人调用时仅返回已启用（status=ENABLED）。
 
 ---
 
-## 九、主持人 B 端 - 交付物
+## 九、交付物（主持人 / 超管）
 
 ### 9.1 生成交付物
 
@@ -1412,8 +1490,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/b/projects/{projectId}/deliverables/generate` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{projectId}/deliverables/generate` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -1449,8 +1527,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/projects/{projectId}/deliverables/{contentType}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/projects/{projectId}/deliverables/{contentType}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1471,13 +1549,13 @@
 
 ### 9.3 按 ID 获取交付物
 
-**接口含义：** 根据交付物 ID 查询详情。
+**接口含义：** 根据交付物 ID 查询详情。路径为 **`/api/deliverables/{id}`**。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/deliverables/{deliverableId}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/deliverables/{id}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1486,7 +1564,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| deliverableId | number | 是 | 交付物 ID |
+| id | number | 是 | 交付物 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -1517,8 +1595,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/b/deliverables/{deliverableId}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/deliverables/{id}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
@@ -1527,7 +1605,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| deliverableId | number | 是 | 交付物 ID |
+| id | number | 是 | 交付物 ID |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -1556,8 +1634,8 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `DELETE` |
-| 路径 | `/api/b/deliverables/{deliverableId}` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/deliverables/{id}` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1566,7 +1644,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| deliverableId | number | 是 | 交付物 ID |
+| id | number | 是 | 交付物 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -1575,17 +1653,19 @@
 
 ---
 
-## 十、主持人 B 端 - 用户
+## 十、用户 / 当前用户资料（主持人 / 超管共用）
+
+以下为 **`/api/users`**。`GET/PUT /api/users/me` 共用：主持人返回 HostProfileResponse（昵称、会员、配额等），超管返回 CurrentUserResponse；列表、详情、状态、会员、配额等仅超管。
 
 ### 10.1 我的资料
 
-**接口含义：** 查询当前主持人的个人资料（昵称、手机号、联系方式展示方式、配额等）。
+**接口含义：** 查询当前用户的个人资料。主持人为昵称、手机号、联系方式、配额等；超管为基本信息（userId、userType、roles、name、phone）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/b/users/me` |
-| 认证 | 是（主持人 token） |
+| 路径 | `/api/users/me` |
+| 认证 | 是（主持人或超管 token） |
 | Header | `Authorization: Bearer {{token}}` |
 
 **请求**
@@ -1612,12 +1692,12 @@
 
 ### 10.2 更新我的资料
 
-**接口含义：** 修改主持人昵称、手机号、联系方式是否对 C 端可见等。
+**接口含义：** 修改主持人昵称、手机号、联系方式是否对 C 端可见等（仅主持人可调用）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/b/users/me` |
+| 路径 | `/api/users/me` |
 | 认证 | 是（主持人 token） |
 | Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
@@ -1646,20 +1726,20 @@
 
 ---
 
-## 十一、超管 - 主持人管理
+## 十一、用户/主持人管理（仅超管）
 
-以下接口均需**超管 token**（`Authorization: Bearer {{adminToken}}`）。
+以下为 **`/api/users`** 下仅超管可调用的接口，需**超管 token**（`Authorization: Bearer {{token}}`）。
 
-### 11.1 主持人列表
+### 11.1 用户/主持人列表
 
-**接口含义：** 分页查询主持人账号列表，支持按状态、配额状态、关键词筛选。
+**接口含义：** 分页查询用户/主持人账号列表，支持按状态、配额状态、关键词筛选。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/hosts` |
+| 路径 | `/api/users` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
+| Header | `Authorization: Bearer {{token}}` |
 
 **请求**
 
@@ -1699,9 +1779,9 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/admin/hosts` |
+| 路径 | `/api/users` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
+| Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
 
@@ -1728,16 +1808,16 @@
 
 ---
 
-### 11.3 主持人详情
+### 11.3 用户/主持人详情
 
-**接口含义：** 根据主持人 ID 查询其详情及配额信息。
+**接口含义：** 根据用户 ID 查询其详情及配额信息。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/hosts/{hostId}` |
+| 路径 | `/api/users/{id}` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
+| Header | `Authorization: Bearer {{token}}` |
 
 **请求**
 
@@ -1745,12 +1825,12 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| hostId | number | 是 | 主持人用户 ID |
+| id | number | 是 | 用户/主持人 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
 
-**响应体（data 为主持人详情对象）：**
+**响应体（data 为用户/主持人详情对象）：**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -1765,16 +1845,16 @@
 
 ---
 
-### 11.4 更新主持人状态
+### 11.4 更新用户状态
 
-**接口含义：** 启用或停用主持人账号。
+**接口含义：** 启用或停用用户/主持人账号。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/admin/hosts/{hostId}/status` |
+| 路径 | `/api/users/{id}/status` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
+| Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
 
@@ -1782,7 +1862,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| hostId | number | 是 | 主持人用户 ID |
+| id | number | 是 | 用户/主持人 ID |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -1804,14 +1884,14 @@
 
 ### 11.5 开通会员
 
-**接口含义：** 为指定主持人开通会员套餐，按套餐配置增加项目配额与有效期。
+**接口含义：** 为指定用户/主持人开通会员套餐，按套餐配置增加项目配额与有效期。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/admin/hosts/{hostId}/activate-member` |
+| 路径 | `/api/users/{id}/activate-member` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
+| Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
 
@@ -1819,7 +1899,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| hostId | number | 是 | 主持人用户 ID |
+| id | number | 是 | 用户/主持人 ID |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -1841,14 +1921,14 @@
 
 ### 11.6 调整配额
 
-**接口含义：** 对主持人项目配额做增减（正数增加、负数扣减），并记录原因。
+**接口含义：** 对用户/主持人项目配额做增减（正数增加、负数扣减），并记录原因。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/admin/hosts/{hostId}/quota` |
+| 路径 | `/api/users/{id}/quota` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
+| Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
 
@@ -1856,7 +1936,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| hostId | number | 是 | 主持人用户 ID |
+| id | number | 是 | 用户/主持人 ID |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -1880,14 +1960,14 @@
 
 ### 11.7 配额流水
 
-**接口含义：** 分页查询指定主持人的项目配额变动流水（开通、调整、扣减等）。
+**接口含义：** 分页查询指定用户/主持人的项目配额变动流水（开通、调整、扣减等）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/hosts/{hostId}/quota-flows` |
+| 路径 | `/api/users/{id}/quota-flows` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
+| Header | `Authorization: Bearer {{token}}` |
 
 **请求**
 
@@ -1895,7 +1975,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| hostId | number | 是 | 主持人用户 ID |
+| id | number | 是 | 用户/主持人 ID |
 
 - **Query 参数：**
 
@@ -1923,92 +2003,31 @@
 
 ---
 
-## 十二、超管 - 项目管理
+## 十二、超管 - 项目管理（与第七章共用路径）
 
-### 12.1 项目列表
+超管使用**与第七章相同的路径** **`/api/projects`**：  
+- **项目列表**：`GET /api/projects`，传 `hostUserId`、`status`、`keyword` 等筛选，返回含 hostName、hostPhone 的分页列表。  
+- **项目详情**：`GET /api/projects/{id}`，返回含 hostUserId、hostName、hostPhone、participants、contents 的详情。  
+- **分享入口**：`GET /api/projects/{id}/share`，超管可查任意项目。  
 
-**接口含义：** 超管分页查询全平台项目，支持按主持人、状态、关键词筛选。
-
-| 项目 | 说明 |
-|------|------|
-| 方法 | `GET` |
-| 路径 | `/api/admin/projects` |
-| 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
-
-**请求**
-
-- **路径参数：** 无  
-- **Query 参数：**
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| page | number | 否 | 页码，默认 1 |
-| size | number | 否 | 每页条数，默认 10 |
-| hostUserId | number | 否 | 主持人用户 ID，不传则查全部 |
-| status | string | 否 | 项目状态 |
-| keyword | string | 否 | 关键词：新人姓名、项目编号等 |
-
-- **请求体：** 无  
-
-**响应体（data 为分页对象）：** 遵循「分页响应」结构；`content` 中每项为项目列表项（含主持人信息），结构见「12.2 项目详情」下方 content 元素说明；列表项字段为：id、projectNo、groomName、brideName、weddingDate、status、createdAt、hostUserId、hostName、hostPhone。
+请求/响应结构见**第七章**；超管与主持人仅数据范围与返回字段（如是否含 host 信息）不同。
 
 ---
 
-### 12.2 项目详情
+## 十三、板块元数据（主持人 / 超管共用）
 
-**接口含义：** 超管根据项目 ID 查看项目完整详情。
-
-| 项目 | 说明 |
-|------|------|
-| 方法 | `GET` |
-| 路径 | `/api/admin/projects/{projectId}` |
-| 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
-
-**请求**
-
-- **路径参数：**
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| projectId | number | 是 | 项目 ID |
-
-- **Query 参数：** 无  
-- **请求体：** 无  
-
-**响应体（data 为超管视角项目详情对象）：**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | number | 项目 ID |
-| projectNo | string | 项目编号 |
-| groomName | string | 新郎姓名 |
-| brideName | string | 新娘姓名 |
-| weddingDate | string | 婚期 |
-| status | string | 项目状态 |
-| shareToken | string | 分享令牌 |
-| createdAt | string | 创建时间，ISO 日期时间 |
-| hostUserId | number | 主持人用户 ID |
-| hostName | string | 主持人姓名 |
-| hostPhone | string | 主持人手机号 |
-| participants | array | 参与者摘要列表，每项结构同「7.3 项目详情」的 participants 元素 |
-| contents | array | 生成物摘要列表，每项结构同「7.3 项目详情」的 contents 元素 |
-
----
-
-## 十三、超管 - 板块元数据
+统一路径为 **`/api/board-meta`**。主持人（HOST）：`GET` 仅返回已启用列表；超管（SUPER_ADMIN）：`GET` 返回全部，且可 `POST`/`PUT`/`DELETE` 增删改。
 
 ### 13.1 板块元数据列表
 
-**接口含义：** 查询所有板块元数据（定义板块类型与名称，供项目添加板块时选择）。
+**接口含义：** 查询板块元数据。主持人仅返回已启用；超管返回全部。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/board-meta` |
-| 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
+| 路径 | `/api/board-meta` |
+| 认证 | 是（主持人或超管 token） |
+| Header | `Authorization: Bearer {{token}}` |
 
 **请求**
 
@@ -2016,7 +2035,7 @@
 - **Query 参数：** 无  
 - **请求体：** 无  
 
-**响应体（data 为板块元数据对象数组）：** 每项结构同「13.2 板块元数据详情」的 data，见该节。
+**响应体（data 为板块元数据对象数组）：** 每项结构同「13.2 板块元数据详情」的 data。
 
 ---
 
@@ -2027,9 +2046,9 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/board-meta/{id}` |
-| 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
+| 路径 | `/api/board-meta/{id}` |
+| 认证 | 是（主持人或超管 token） |
+| Header | `Authorization: Bearer {{token}}` |
 
 **请求**
 
@@ -2057,16 +2076,16 @@
 
 ---
 
-### 13.3 创建板块元数据
+### 13.3 创建板块元数据（仅超管）
 
 **接口含义：** 新增一种板块类型（编码、名称、顺序、描述、状态）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/admin/board-meta` |
+| 路径 | `/api/board-meta` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
+| Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
 
@@ -2097,16 +2116,16 @@
 
 ---
 
-### 13.4 更新板块元数据
+### 13.4 更新板块元数据（仅超管）
 
 **接口含义：** 修改板块元数据的名称、顺序、描述、状态。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/admin/board-meta/{id}` |
+| 路径 | `/api/board-meta/{id}` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
+| Header | `Authorization: Bearer {{token}}`、`Content-Type: application/json` |
 
 **请求**
 
@@ -2140,16 +2159,16 @@
 
 ---
 
-### 13.5 删除板块元数据
+### 13.5 删除板块元数据（仅超管）
 
 **接口含义：** 删除指定板块元数据（可能受是否存在关联项目板块限制）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `DELETE` |
-| 路径 | `/api/admin/board-meta/{id}` |
+| 路径 | `/api/board-meta/{id}` |
 | 认证 | 是（超管 token） |
-| Header | `Authorization: Bearer {{adminToken}}` |
+| Header | `Authorization: Bearer {{token}}` |
 
 **请求**
 
@@ -2166,9 +2185,53 @@
 
 ---
 
-## 十四、超管 - 提示词
+## 十四、超管 - 仪表盘（系统总览）
 
-### 14.1 按场景获取提示词
+### 14.1 仪表盘总览
+
+**接口含义：** 获取 P01 系统总览页面数据，包含今日指标、成本估算、最近项目、总用户数、待处理内容等。仅 SUPER_ADMIN 可访问。
+
+| 项目 | 说明 |
+|------|------|
+| 方法 | `GET` |
+| 路径 | `/api/admin/dashboard` |
+| 认证 | 是（超管 token） |
+| Header | `Authorization: Bearer {{adminToken}}` |
+
+**请求**
+
+- **路径参数：** 无  
+- **Query 参数：** 无  
+- **请求体：** 无  
+
+**响应体（data 为 DashboardOverviewResponse）：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| todayMetrics | object | 今日关键指标 |
+| todayMetrics.todayProjects | number | 今日新增项目数 |
+| todayMetrics.todayActiveSessions | number | 今日采访会话数（活跃） |
+| todayMetrics.todayGenerations | number | 今日生成次数 |
+| todayMetrics.failureRatePercent | number | 失败率（0-100），首期暂无返回 0 |
+| costMetrics | object | 成本估算（今日） |
+| costMetrics.speechMinutes | number | 语音识别分钟数 |
+| costMetrics.modelCallUsage | number | 模型调用消耗量，首期暂无返回 0 |
+| costMetrics.storageObjectCount | number | 存储对象数（近似口径） |
+| recentFailures | array | 最近失败记录，首期暂无返回 [] |
+| recentProjects | array | 最近项目列表（最多 10 条） |
+| recentProjects[].id | number | 项目 ID |
+| recentProjects[].projectNo | string | 项目编号 |
+| recentProjects[].title | string | 项目标题（新人名组合） |
+| recentProjects[].status | string | 项目状态 |
+| recentProjects[].createdAt | string | 创建时间 |
+| totalUsers | number | 总用户数 |
+| pendingContentCount | number | 待处理内容数（OUTDATED 状态） |
+
+---
+
+## 十四（续）、超管 - 提示词供给（按场景）
+
+### 14.2 按场景获取提示词
 
 **接口含义：** 按场景编码获取该场景下即将生效的提示词内容列表，用于调试与验收。
 
@@ -2194,8 +2257,7 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| templateId | number | 提示词模板 ID |
-| templateCode | string | 模板编码 |
+| promptCode | string | 提示词编码 |
 | versionNo | number | 使用的版本号 |
 | content | string | 该条提示词正文内容 |
 | displayOrder | number | 在场景中的展示/拼接顺序 |
@@ -2203,7 +2265,7 @@
 
 ---
 
-### 14.2 按场景获取合并内容
+### 14.3 按场景获取合并内容
 
 **接口含义：** 按场景编码获取合并后的完整提示词字符串（即实际发给大模型的内容预览）。
 
@@ -2229,16 +2291,16 @@
 
 ---
 
-## 十五、超管 - 提示词模板
+## 十五、超管 - 提示词管理
 
-### 15.1 模板列表
+### 15.1 提示词列表
 
-**接口含义：** 查询提示词模板列表，支持按内容类型、状态筛选。
+**接口含义：** 查询当前生效的提示词列表，支持按内容类型、状态筛选。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/prompt-templates` |
+| 路径 | `/api/admin/prompts` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2254,18 +2316,18 @@
 
 - **请求体：** 无  
 
-**响应体（data 为模板对象数组）：** 每项结构同「15.2 模板详情」的 data，见该节。
+**响应体（data 为提示词对象数组）：** 每项结构同「15.2 提示词详情」的 data，见该节。
 
 ---
 
-### 15.2 模板详情
+### 15.2 提示词详情
 
-**接口含义：** 根据模板 ID 查询模板详情及当前生效版本信息。
+**接口含义：** 根据提示词 ID 查询详情（含当前生效版本信息）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/prompt-templates/{templateId}` |
+| 路径 | `/api/admin/prompts/{id}` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2275,35 +2337,38 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 提示词模板 ID |
+| id | number | 是 | 提示词 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
 
-**响应体（data 为提示词模板对象）：**
+**响应体（data 为提示词对象）：**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | number | 模板 ID |
-| code | string | 模板编码 |
-| name | string | 模板名称 |
+| id | number | 提示词 ID |
+| code | string | 提示词编码 |
+| name | string | 提示词名称 |
 | contentType | string | 内容类型，如 TEXT |
 | description | string | 描述 |
 | status | string | 状态：ENABLED、DISABLED |
+| versionNo | number | 当前行版本号 |
+| content | string | 当前行正文内容 |
+| isActive | boolean | 是否当前生效 |
 | createdAt | string | 创建时间，ISO 日期时间 |
+| createdBy | number | 创建人用户 ID |
 | updatedAt | string | 更新时间，ISO 日期时间 |
-| activeVersionNo | number | 当前生效的版本号 |
 
 ---
 
-### 15.3 创建模板
+### 15.3 创建提示词
 
-**接口含义：** 新建一个提示词模板（编码、名称、内容类型、描述、状态）。
+**接口含义：** 新建一条提示词（编码、名称、正文等，首版 version_no=1 且生效）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/admin/prompt-templates` |
+| 路径 | `/api/admin/prompts` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
 
@@ -2320,30 +2385,32 @@
 | contentType | string | 否 | 内容类型，默认 TEXT |
 | description | string | 否 | 描述，最长 500 字符 |
 | status | string | 否 | 状态，默认 ENABLED |
+| content | string | 是 | 提示词正文（首版内容） |
 
 **请求示例：**
 ```json
 {
-  "code": "opening_template",
-  "name": "开场白模板",
+  "code": "opening_prompt",
+  "name": "开场白提示词",
   "contentType": "TEXT",
   "description": "婚礼开场白",
-  "status": "ENABLED"
+  "status": "ENABLED",
+  "content": "你的核心能力是：深度解构新人碎片的采访素材..."
 }
 ```
 
-**响应体（data 为新建的模板对象）：** 字段与「15.2 模板详情」的 data 相同。
+**响应体（data 为新建的提示词对象）：** 字段与「15.2 提示词详情」的 data 相同。
 
 ---
 
-### 15.4 更新模板
+### 15.4 更新提示词
 
-**接口含义：** 修改模板的名称、内容类型、描述、状态。
+**接口含义：** 修改提示词名称、内容类型、描述、状态或正文（按 id 更新该行）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/admin/prompt-templates/{templateId}` |
+| 路径 | `/api/admin/prompts/{id}` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
 
@@ -2353,7 +2420,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| id | number | 是 | 提示词 ID |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -2364,29 +2431,30 @@
 | contentType | string | 否 | 内容类型 |
 | description | string | 否 | 描述，最长 500 字符 |
 | status | string | 否 | 状态 |
+| content | string | 否 | 提示词正文 |
 
 **请求示例：**
 ```json
 {
-  "name": "开场白模板(更新)",
+  "name": "开场白提示词(更新)",
   "contentType": "TEXT",
   "description": "更新描述",
   "status": "ENABLED"
 }
 ```
 
-**响应体（data 为更新后的模板对象）：** 字段与「15.2 模板详情」的 data 相同。
+**响应体（data 为更新后的提示词对象）：** 字段与「15.2 提示词详情」的 data 相同。
 
 ---
 
-### 15.5 删除模板
+### 15.5 删除提示词
 
-**接口含义：** 删除指定提示词模板（可能受场景引用限制）。
+**接口含义：** 删除指定提示词（按 id 删除该行；若该 code 被场景引用则禁止）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `DELETE` |
-| 路径 | `/api/admin/prompt-templates/{templateId}` |
+| 路径 | `/api/admin/prompts/{id}` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2396,7 +2464,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| id | number | 是 | 提示词 ID |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -2409,12 +2477,12 @@
 
 ### 16.1 版本列表
 
-**接口含义：** 查询某模板下的所有版本（历史与当前生效）。
+**接口含义：** 查询某提示词（按 code）下的所有版本（历史与当前生效）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/prompt-templates/{templateId}/versions` |
+| 路径 | `/api/admin/prompts/{code}/versions` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2424,7 +2492,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| code | string | 是 | 提示词编码 |
 
 - **Query 参数：** 无  
 - **请求体：** 无  
@@ -2440,7 +2508,7 @@
 | 项目 | 说明 |
 |------|------|
 | 方法 | `GET` |
-| 路径 | `/api/admin/prompt-templates/{templateId}/versions/{versionId}` |
+| 路径 | `/api/admin/prompts/{code}/versions/{versionId}` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2450,7 +2518,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| code | string | 是 | 提示词编码 |
 | versionId | number | 是 | 版本 ID |
 
 - **Query 参数：** 无  
@@ -2461,7 +2529,7 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | number | 版本 ID |
-| templateId | number | 所属模板 ID |
+| code | string | 所属提示词编码 |
 | versionNo | number | 版本号（从 1 递增） |
 | content | string | 该版本正文内容 |
 | isActive | boolean | 是否为当前生效版本 |
@@ -2472,12 +2540,12 @@
 
 ### 16.3 创建版本
 
-**接口含义：** 为模板新增一个版本内容，并可选择是否设为当前生效版本。
+**接口含义：** 为提示词（按 code）新增一个版本内容，并可选择是否设为当前生效版本。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `POST` |
-| 路径 | `/api/admin/prompt-templates/{templateId}/versions` |
+| 路径 | `/api/admin/prompts/{code}/versions` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}`、`Content-Type: application/json` |
 
@@ -2487,7 +2555,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| code | string | 是 | 提示词编码 |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -2511,12 +2579,12 @@
 
 ### 16.4 激活版本
 
-**接口含义：** 将指定版本设为该模板的当前生效版本（用于生成/预览时使用）。
+**接口含义：** 将指定版本设为该提示词的当前生效版本（用于生成/预览时使用）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `PUT` |
-| 路径 | `/api/admin/prompt-templates/{templateId}/versions/{versionId}/activate` |
+| 路径 | `/api/admin/prompts/{code}/versions/{versionId}/activate` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2526,7 +2594,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| code | string | 是 | 提示词编码 |
 | versionId | number | 是 | 版本 ID |
 
 - **Query 参数：** 无  
@@ -2538,12 +2606,12 @@
 
 ### 16.5 删除版本
 
-**接口含义：** 删除指定版本（当前生效版本可能不可删，以实际业务为准）。
+**接口含义：** 删除指定版本（当前生效版本不可删）。
 
 | 项目 | 说明 |
 |------|------|
 | 方法 | `DELETE` |
-| 路径 | `/api/admin/prompt-templates/{templateId}/versions/{versionId}` |
+| 路径 | `/api/admin/prompts/{code}/versions/{versionId}` |
 | 认证 | 是（超管 token） |
 | Header | `Authorization: Bearer {{adminToken}}` |
 
@@ -2553,7 +2621,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 模板 ID |
+| code | string | 是 | 提示词编码 |
 | versionId | number | 是 | 版本 ID |
 
 - **Query 参数：** 无  
@@ -2596,7 +2664,7 @@
 
 ### 17.2 场景详情
 
-**接口含义：** 根据场景 ID 查询场景详情及关联的模板条目。
+**接口含义：** 根据场景 ID 查询场景详情及关联的提示词条目。
 
 | 项目 | 说明 |
 |------|------|
@@ -2630,17 +2698,16 @@
 | status | string | 状态：ENABLED、DISABLED |
 | createdAt | string | 创建时间，ISO 日期时间 |
 | updatedAt | string | 更新时间，ISO 日期时间 |
-| items | array | 场景下绑定的模板项列表，每项结构见下表 |
+| items | array | 场景下绑定的提示词项列表，每项结构见下表 |
 
 **items 数组中每个元素：**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | number | 场景项 ID（场景与模板关联记录 ID） |
+| id | number | 场景项 ID（场景与提示词关联记录 ID） |
 | sceneId | number | 所属场景 ID |
-| templateId | number | 关联的模板 ID |
-| templateCode | string | 模板编码 |
-| templateName | string | 模板名称 |
+| promptCode | string | 关联的提示词编码 |
+| promptName | string | 提示词名称 |
 | displayOrder | number | 展示/拼接顺序 |
 | usageMode | string | 使用方式，如 APPEND |
 
@@ -2763,7 +2830,7 @@
 
 ### 17.6 添加场景项
 
-**接口含义：** 在场景中关联一个提示词模板并设置顺序与使用方式（如追加/替换）。
+**接口含义：** 在场景中关联一条提示词并设置顺序与使用方式（如追加/替换）。
 
 | 项目 | 说明 |
 |------|------|
@@ -2785,20 +2852,20 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| templateId | number | 是 | 提示词模板 ID |
+| promptCode | string | 是 | 提示词编码 |
 | displayOrder | number | 否 | 展示/拼接顺序，默认 0 |
 | usageMode | string | 否 | 使用方式，默认 APPEND（追加），可选其他（以实际枚举为准） |
 
 **请求示例：**
 ```json
 {
-  "templateId": 1,
+  "promptCode": "WEDDING_INTRO",
   "displayOrder": 0,
   "usageMode": "APPEND"
 }
 ```
 
-**响应体（data 为场景项对象）：** 字段与「17.2 场景详情」中 items 数组元素结构相同（id、sceneId、templateId、templateCode、templateName、displayOrder、usageMode）。
+**响应体（data 为场景项对象）：** 字段与「17.2 场景详情」中 items 数组元素结构相同（id、sceneId、promptCode、promptName、displayOrder、usageMode）。
 
 ---
 
@@ -2819,7 +2886,7 @@
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| itemId | number | 是 | 场景项 ID（场景与模板关联记录的 ID） |
+| itemId | number | 是 | 场景项 ID（场景与提示词关联记录的 ID） |
 
 - **Query 参数：** 无  
 - **请求体（JSON）：**
@@ -2843,7 +2910,7 @@
 
 ### 17.8 删除场景项
 
-**接口含义：** 从场景中移除一条模板关联（删除场景项）。
+**接口含义：** 从场景中移除一条提示词关联（删除场景项）。
 
 | 项目 | 说明 |
 |------|------|
@@ -2867,4 +2934,107 @@
 
 ---
 
-*文档基于项目 Postman 集合与后端 Controller/DTO 整理；请求与响应字段均配有中文说明，若接口有变更请以实际代码为准。*
+---
+
+## 文档修订说明
+
+- 认证、项目、板块元数据、用户、交付物已按「合并主持人与管理员接口」路线统一路径，不再按 `/api/b/*` 与 `/api/admin/*` 区分主持人/超管，改为**同一路径 + 角色鉴权**。
+- 旧路径（如 `/api/b/projects`、`/api/admin/hosts`）已废弃，请使用新路径（如 `/api/projects`、`/api/users`）。
+- 超管专属能力（提示词、语音配额等）仍保留在 `/api/admin/*`。
+- **认证**：新增 `POST /api/auth/wechat-login`（微信小程序登录，body 含 `code`）；补充 `POST /api/auth/login-password`、`POST /api/auth/set-password` 说明。
+- **C 端入口**：`GET /api/c/entry/{token}` 响应增加 `theme`、`roleOptions`（后端返回可选角色及是否可点选），选择身份页由后端驱动。
+
+---
+
+## 接口索引（按路径）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/` | 根路径/存活 |
+| GET | `/api/health` | 健康检查 |
+| POST | `/api/auth/send-code` | 发送验证码 |
+| POST | `/api/auth/login` | 登录（手机+验证码） |
+| POST | `/api/auth/login-password` | 密码登录 |
+| POST | `/api/auth/wechat-login` | 微信小程序登录 |
+| POST | `/api/auth/set-password` | 设置/修改密码 |
+| POST | `/api/auth/logout` | 退出 |
+| GET | `/api/auth/me` | 当前用户 |
+| GET | `/api/c/entry/{token}` | C 端入口-项目信息（含 roleOptions） |
+| GET | `/api/c/speech-quota` | C 端语音转写配额 |
+| POST | `/api/c/projects/{projectId}/bind` | C 端绑定参与者 |
+| POST | `/api/c/sessions` | C 端创建/恢复会话 |
+| GET | `/api/c/sessions/{sessionId}` | C 端会话详情 |
+| GET | `/api/c/sessions/{sessionId}/messages` | C 端消息列表 |
+| POST | `/api/c/sessions/{sessionId}/messages` | C 端发送消息 |
+| PUT | `/api/c/sessions/{sessionId}/messages/{messageId}` | C 端更新消息 |
+| DELETE | `/api/c/sessions/{sessionId}/messages/{messageId}` | C 端删除消息 |
+| POST | `/api/c/sessions/{sessionId}/submit` | C 端提交给 AI |
+| POST | `/api/c/sessions/{sessionId}/summaries` | C 端创建小结 |
+| GET | `/api/c/sessions/{sessionId}/summaries/current` | C 端当前小结 |
+| GET | `/api/c/board-summaries/{summaryId}` | C 端小结详情 |
+| PUT | `/api/c/summary-items/{itemId}` | C 端更新小结条目 |
+| POST | `/api/c/board-summaries/{summaryId}/items` | C 端新增小结条目 |
+| DELETE | `/api/c/summary-items/{itemId}` | C 端删除小结条目 |
+| POST | `/api/c/board-summaries/{summaryId}/confirm` | C 端确认小结 |
+| POST | `/api/c/sessions/{sessionId}/stories` | C 端创建故事 |
+| GET | `/api/c/sessions/{sessionId}/stories` | C 端获取故事 |
+| GET | `/api/c/sessions/{sessionId}/persons` | C 端人物列表 |
+| POST | `/api/c/sessions/{sessionId}/persons` | C 端新增人物 |
+| PUT | `/api/c/key-persons/{personId}` | C 端更新关键人物 |
+| DELETE | `/api/c/key-persons/{personId}` | C 端删除关键人物 |
+| GET | `/api/projects` | 项目列表 |
+| POST | `/api/projects` | 创建项目 |
+| GET | `/api/projects/{id}` | 项目详情 |
+| GET | `/api/projects/{id}/share` | 分享入口 |
+| POST | `/api/projects/{projectId}/deliverables/generate` | 生成交付物 |
+| GET | `/api/projects/{projectId}/deliverables/{contentType}` | 按类型获取交付物 |
+| GET | `/api/deliverables/{id}` | 交付物详情 |
+| PUT | `/api/deliverables/{id}` | 更新交付物 |
+| DELETE | `/api/deliverables/{id}` | 删除交付物 |
+| GET | `/api/board-meta` | 板块元数据列表 |
+| GET | `/api/board-meta/enabled` | 已启用板块列表 |
+| GET | `/api/board-meta/{id}` | 板块元数据详情 |
+| POST | `/api/board-meta` | 创建板块元数据（超管） |
+| PUT | `/api/board-meta/{id}` | 更新板块元数据（超管） |
+| DELETE | `/api/board-meta/{id}` | 删除板块元数据（超管） |
+| GET | `/api/projects/{projectId}/boards` | 项目板块列表 |
+| POST | `/api/projects/{projectId}/boards` | 添加项目板块 |
+| PUT | `/api/projects/{projectId}/boards/{projectBoardId}` | 更新项目板块 |
+| DELETE | `/api/projects/{projectId}/boards/{projectBoardId}` | 删除项目板块 |
+| GET | `/api/users/me` | 我的资料 |
+| PUT | `/api/users/me` | 更新我的资料 |
+| GET | `/api/users` | 用户列表（超管） |
+| POST | `/api/users` | 创建主持人（超管） |
+| GET | `/api/users/{id}` | 用户详情（超管） |
+| PUT | `/api/users/{id}/status` | 更新用户状态（超管） |
+| POST | `/api/users/{id}/activate-member` | 开通/续费会员（超管） |
+| PUT | `/api/users/{id}/quota` | 调整配额（超管） |
+| GET | `/api/users/{id}/quota-flows` | 配额流水（超管） |
+| DELETE | `/api/users/{id}` | 删除用户（超管） |
+| GET | `/api/admin/dashboard` | 超管仪表盘 |
+| GET | `/api/admin/deliverables` | 超管交付物列表 |
+| GET | `/api/admin/prompts` | 提示词列表 |
+| GET | `/api/admin/prompts/{id}` | 提示词详情 |
+| POST | `/api/admin/prompts` | 创建提示词 |
+| PUT | `/api/admin/prompts/{id}` | 更新提示词 |
+| DELETE | `/api/admin/prompts/{id}` | 删除提示词 |
+| GET | `/api/admin/prompts/scene/{sceneCode}` | 按场景获取提示词 |
+| GET | `/api/admin/prompts/scene/{sceneCode}/combined` | 按场景获取合并内容 |
+| GET | `/api/admin/prompts/{code}/versions` | 版本列表 |
+| GET | `/api/admin/prompts/{code}/versions/{versionId}` | 版本详情 |
+| POST | `/api/admin/prompts/{code}/versions` | 创建版本 |
+| PUT | `/api/admin/prompts/{code}/versions/{versionId}/activate` | 激活版本 |
+| DELETE | `/api/admin/prompts/{code}/versions/{versionId}` | 删除版本 |
+| GET | `/api/admin/prompt-scenes` | 场景列表 |
+| GET | `/api/admin/prompt-scenes/{id}` | 场景详情 |
+| POST | `/api/admin/prompt-scenes` | 创建场景 |
+| PUT | `/api/admin/prompt-scenes/{id}` | 更新场景 |
+| DELETE | `/api/admin/prompt-scenes/{id}` | 删除场景 |
+| POST | `/api/admin/prompt-scenes/{id}/items` | 添加场景项 |
+| PUT | `/api/admin/prompt-scenes/items/{itemId}` | 更新场景项 |
+| DELETE | `/api/admin/prompt-scenes/items/{itemId}` | 删除场景项 |
+| GET | `/api/admin/config/password-policy` | 获取密码策略 |
+| PUT | `/api/admin/config/password-policy` | 更新密码策略 |
+| POST | `/api/admin/speech-quota/add` | 超管增加用户语音配额 |
+
+*文档基于项目 Controller/DTO 整理；若接口有变更请以实际代码为准。*

@@ -10,8 +10,8 @@ import lombok.Data;
 @Builder
 public class PromptContentDto {
 
-    private Long templateId;
-    private String templateCode;
+    private Long promptId;
+    private String promptCode;
     private Integer versionNo;
     private String content;
     private Integer displayOrder;

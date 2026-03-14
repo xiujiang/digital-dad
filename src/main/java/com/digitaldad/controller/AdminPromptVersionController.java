@@ -2,7 +2,7 @@ package com.digitaldad.prompt.controller;
 
 import com.digitaldad.common.result.Result;
 import com.digitaldad.prompt.dto.*;
-import com.digitaldad.prompt.service.PromptVersionService;
+import com.digitaldad.prompt.service.PromptService;
 import com.digitaldad.user.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,75 +12,57 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 超管 - 提示词版本管理
- * <p>提供提示词模板的版本列表、创建、激活、删除等操作。</p>
+ * 超管 - 提示词版本管理（按 code 管理多版本）
  */
 @RestController
-@RequestMapping("/api/admin/prompt-templates/{templateId}/versions")
+@RequestMapping("/api/admin/prompts/{code}/versions")
 @RequiredArgsConstructor
 public class AdminPromptVersionController {
 
-    private final PromptVersionService versionService;
+    private final PromptService promptService;
 
     /**
-     * 列出模板下的所有版本
-     *
-     * @param templateId 模板 ID
-     * @return 版本列表
+     * 列出该提示词（code）下的所有版本
      */
     @GetMapping
-    public Result<List<PromptVersionResponse>> list(@PathVariable Long templateId) {
-        return Result.ok(versionService.listByTemplate(templateId));
+    public Result<List<PromptVersionResponse>> list(@PathVariable String code) {
+        return Result.ok(promptService.listVersionsByCode(code));
     }
 
     /**
-     * 获取版本详情
-     *
-     * @param versionId 版本 ID
-     * @return 版本详情
+     * 获取版本详情（按版本 id）
      */
     @GetMapping("/{versionId}")
     public Result<PromptVersionResponse> get(@PathVariable Long versionId) {
-        return Result.ok(versionService.getById(versionId));
+        return Result.ok(promptService.getVersionById(versionId));
     }
 
     /**
-     * 创建新版本
-     *
-     * @param templateId 模板 ID
-     * @param principal  当前登录用户（可选）
-     * @param request    版本内容
-     * @return 新建的版本
+     * 创建新版本（同 code，version_no 递增）
      */
     @PostMapping
     public Result<PromptVersionResponse> create(
-            @PathVariable Long templateId,
+            @PathVariable String code,
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreatePromptVersionRequest request) {
         Long userId = principal != null ? principal.getUserId() : null;
-        return Result.ok(versionService.create(templateId, request, userId));
+        return Result.ok(promptService.createVersion(code, request, userId));
     }
 
     /**
-     * 激活指定版本（使之生效）
-     *
-     * @param versionId 版本 ID
-     * @return 激活后的版本
+     * 激活指定版本
      */
     @PutMapping("/{versionId}/activate")
     public Result<PromptVersionResponse> activate(@PathVariable Long versionId) {
-        return Result.ok(versionService.activate(versionId));
+        return Result.ok(promptService.activateVersion(versionId));
     }
 
     /**
-     * 删除版本
-     *
-     * @param versionId 版本 ID
-     * @return 成功时返回空结果
+     * 删除版本（生效中的不能删）
      */
     @DeleteMapping("/{versionId}")
     public Result<Void> delete(@PathVariable Long versionId) {
-        versionService.delete(versionId);
+        promptService.deleteVersion(versionId);
         return Result.ok();
     }
 }

@@ -17,11 +17,18 @@ import com.digitaldad.project.repository.GeneratedContentRepository;
 import com.digitaldad.project.repository.MaterialSnapshotRepository;
 import com.digitaldad.project.repository.ProjectParticipantRepository;
 import com.digitaldad.project.repository.ProjectRepository;
+import com.digitaldad.project.dto.AdminDeliverableListItemResponse;
 import com.digitaldad.prompt.dto.PromptContentDto;
 import com.digitaldad.prompt.service.PromptSupplyService;
+import com.digitaldad.user.entity.User;
+import com.digitaldad.user.entity.User;
+import com.digitaldad.user.repository.UserRepository;
+import com.digitaldad.user.security.UserPrincipal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +51,7 @@ public class DeliverableService {
     private final ProjectBoardRepository projectBoardRepository;
     private final PromptSupplyService promptSupplyService;
     private final AiChatService aiChatService;
+    private final UserRepository userRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final Map<ContentType, String> CONTENT_TYPE_NAMES = Map.of(
@@ -51,11 +59,14 @@ public class DeliverableService {
 
     /**
      * 根据已确认素材生成交付物（AI 生成）
+     * <p>主持人仅限本人项目；超管可操作任意项目。</p>
      */
     @Transactional
-    public DeliverableDetailResponse generate(Long projectId, Long hostUserId, GenerateDeliverableRequest request) {
+    public DeliverableDetailResponse generate(Long projectId, UserPrincipal principal, GenerateDeliverableRequest request) {
         Project project = projectRepository.findById(projectId).orElseThrow(() -> new BusinessException(404, "项目不存在"));
-        if (!project.getHostUserId().equals(hostUserId)) throw new BusinessException(403, "无权限访问该项目");
+        if (!principal.hasRole("SUPER_ADMIN") && !project.getHostUserId().equals(principal.getUserId())) {
+            throw new BusinessException(403, "无权限访问该项目");
+        }
         ContentType contentType = request.getContentType();
         List<ProjectParticipant> participants = participantRepository.findByProjectIdOrderByRoleType(projectId);
         ProjectParticipant groom = participants.stream().filter(p -> p.getRoleType() == ParticipantRole.GROOM).findFirst().orElse(null);
@@ -124,10 +135,13 @@ public class DeliverableService {
 
     /**
      * 按项目与内容类型获取交付物
+     * <p>主持人仅限本人项目；超管可操作任意项目。</p>
      */
-    public DeliverableDetailResponse getDetail(Long projectId, ContentType contentType, Long hostUserId) {
+    public DeliverableDetailResponse getDetail(Long projectId, ContentType contentType, UserPrincipal principal) {
         Project project = projectRepository.findById(projectId).orElseThrow(() -> new BusinessException(404, "项目不存在"));
-        if (!project.getHostUserId().equals(hostUserId)) throw new BusinessException(403, "无权限");
+        if (!principal.hasRole("SUPER_ADMIN") && !project.getHostUserId().equals(principal.getUserId())) {
+            throw new BusinessException(403, "无权限");
+        }
         GeneratedContent content = contentRepository.findByProjectIdAndContentType(projectId, contentType).orElseThrow(() -> new BusinessException(404, "该类型交付物尚未生成"));
         refreshOutdatedStatus(content);
         return toResponse(content);
@@ -135,23 +149,29 @@ public class DeliverableService {
 
     /**
      * 根据 ID 获取交付物
+     * <p>主持人仅限本人项目；超管可操作任意项目。</p>
      */
-    public DeliverableDetailResponse getById(Long id, Long hostUserId) {
+    public DeliverableDetailResponse getById(Long id, UserPrincipal principal) {
         GeneratedContent content = contentRepository.findById(id).orElseThrow(() -> new BusinessException(404, "交付物不存在"));
         Project project = projectRepository.findById(content.getProjectId()).orElseThrow();
-        if (!project.getHostUserId().equals(hostUserId)) throw new BusinessException(403, "无权限");
+        if (!principal.hasRole("SUPER_ADMIN") && !project.getHostUserId().equals(principal.getUserId())) {
+            throw new BusinessException(403, "无权限");
+        }
         refreshOutdatedStatus(content);
         return toResponse(content);
     }
 
     /**
      * 更新交付物内容
+     * <p>主持人仅限本人项目；超管可操作任意项目。</p>
      */
     @Transactional
-    public DeliverableDetailResponse update(Long id, Long hostUserId, UpdateDeliverableRequest request) {
+    public DeliverableDetailResponse update(Long id, UserPrincipal principal, UpdateDeliverableRequest request) {
         GeneratedContent content = contentRepository.findById(id).orElseThrow(() -> new BusinessException(404, "交付物不存在"));
         Project project = projectRepository.findById(content.getProjectId()).orElseThrow();
-        if (!project.getHostUserId().equals(hostUserId)) throw new BusinessException(403, "无权限");
+        if (!principal.hasRole("SUPER_ADMIN") && !project.getHostUserId().equals(principal.getUserId())) {
+            throw new BusinessException(403, "无权限");
+        }
         if (request.getTitle() != null) content.setTitle(request.getTitle());
         if (request.getContent() != null) content.setContent(request.getContent());
         content.setVersionNo(content.getVersionNo() + 1);
@@ -161,13 +181,62 @@ public class DeliverableService {
 
     /**
      * 删除交付物
+     * <p>主持人仅限本人项目；超管可操作任意项目。</p>
      */
     @Transactional
-    public void delete(Long id, Long hostUserId) {
+    public void delete(Long id, UserPrincipal principal) {
         GeneratedContent content = contentRepository.findById(id).orElseThrow(() -> new BusinessException(404, "交付物不存在"));
         Project project = projectRepository.findById(content.getProjectId()).orElseThrow();
-        if (!project.getHostUserId().equals(hostUserId)) throw new BusinessException(403, "无权限");
+        if (!principal.hasRole("SUPER_ADMIN") && !project.getHostUserId().equals(principal.getUserId())) {
+            throw new BusinessException(403, "无权限");
+        }
         contentRepository.delete(content);
+    }
+
+    /**
+     * 管理员：分页列出全部交付物（含主持人生成人信息）
+     */
+    public Page<AdminDeliverableListItemResponse> listAllForAdmin(int page, int size) {
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(0, page - 1),
+                Math.min(50, Math.max(1, size)),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        Page<GeneratedContent> contentPage = contentRepository.findAllByProjectNotDeleted(pageable);
+        List<GeneratedContent> list = contentPage.getContent();
+        if (list.isEmpty()) {
+            return contentPage.map(c -> AdminDeliverableListItemResponse.builder().build());
+        }
+        Set<Long> projectIds = list.stream().map(GeneratedContent::getProjectId).collect(Collectors.toSet());
+        Map<Long, Project> projectMap = projectRepository.findAllById(projectIds).stream()
+                .collect(Collectors.toMap(Project::getId, p -> p));
+        Set<Long> hostIds = projectMap.values().stream().map(Project::getHostUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userRepository.findAllById(hostIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        return contentPage.map(c -> {
+            Project proj = projectMap.get(c.getProjectId());
+            User host = proj != null ? userMap.get(proj.getHostUserId()) : null;
+            return AdminDeliverableListItemResponse.builder()
+                    .id(c.getId())
+                    .projectId(c.getProjectId())
+                    .projectNo(proj != null ? proj.getProjectNo() : null)
+                    .title(c.getTitle())
+                    .contentType(c.getContentType().name())
+                    .contentTypeName(CONTENT_TYPE_NAMES.get(c.getContentType()))
+                    .status(statusToDisplay(c.getStatus().name()))
+                    .hostUserId(proj != null ? proj.getHostUserId() : null)
+                    .hostName(host != null ? (host.getName() != null ? host.getName() : host.getPhone()) : null)
+                    .createdAt(c.getCreatedAt())
+                    .build();
+        });
+    }
+
+    private static String statusToDisplay(String status) {
+        return switch (status) {
+            case "ACTIVE" -> "已发布";
+            case "DRAFT" -> "草稿";
+            case "OUTDATED" -> "待更新";
+            default -> status;
+        };
     }
 
     /**

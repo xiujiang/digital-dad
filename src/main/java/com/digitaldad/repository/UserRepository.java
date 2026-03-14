@@ -2,7 +2,6 @@ package com.digitaldad.user.repository;
 
 import com.digitaldad.user.entity.User;
 import com.digitaldad.user.enums.UserStatus;
-import com.digitaldad.user.enums.UserType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,17 +17,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPhoneAndDeletedAtIsNull(String phone);
 
-    Optional<User> findByPhoneAndUserTypeAndDeletedAtIsNull(String phone, UserType userType);
-
     Optional<User> findByIdAndDeletedAtIsNull(Long id);
 
     boolean existsByPhoneAndDeletedAtIsNull(String phone);
 
-    @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL AND u.userType = :userType " +
+    /** 按角色筛选用户（存在该角色记录的用户） */
+    @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL " +
+            "AND EXISTS (SELECT 1 FROM UserRole r WHERE r.userId = u.id AND r.role = :role) " +
             "AND (:status IS NULL OR u.status = :status) " +
             "AND (:keyword IS NULL OR :keyword = '' OR u.name LIKE CONCAT('%', :keyword, '%') OR u.phone LIKE CONCAT('%', :keyword, '%'))")
-    Page<User> findByUserTypeAndFilters(
-            @Param("userType") UserType userType,
+    Page<User> findByRoleAndFilters(
+            @Param("role") String role,
             @Param("status") UserStatus status,
             @Param("keyword") String keyword,
             Pageable pageable);

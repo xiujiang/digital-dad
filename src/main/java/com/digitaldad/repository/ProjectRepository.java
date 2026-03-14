@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -23,12 +25,13 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     Page<Project> findByHostUserIdAndDeletedAtIsNullAndStatus(Long hostUserId, ProjectStatus status, Pageable pageable);
 
-    /** 管理员：按主持人、状态、关键词筛选，查询全部项目 */
+    /** 管理员：按主持人、状态、关键词筛选，查询全部项目（关键词含新郎、新娘、编号、主题） */
     @Query("SELECT p FROM Project p WHERE p.deletedAt IS NULL " +
             "AND (:hostUserId IS NULL OR p.hostUserId = :hostUserId) " +
             "AND (:status IS NULL OR p.status = :status) " +
             "AND (:keyword IS NULL OR :keyword = '' OR p.groomName LIKE CONCAT('%', :keyword, '%') " +
-            "OR p.brideName LIKE CONCAT('%', :keyword, '%') OR p.projectNo LIKE CONCAT('%', :keyword, '%'))")
+            "OR p.brideName LIKE CONCAT('%', :keyword, '%') OR p.projectNo LIKE CONCAT('%', :keyword, '%') " +
+            "OR p.theme LIKE CONCAT('%', :keyword, '%'))")
     Page<Project> findByFiltersForAdmin(
             @Param("hostUserId") Long hostUserId,
             @Param("status") ProjectStatus status,
@@ -38,4 +41,13 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     boolean existsByProjectNoAndDeletedAtIsNull(String projectNo);
 
     boolean existsByShareTokenAndDeletedAtIsNull(String shareToken);
+
+    /** 今日新增项目数（状态有效：非 DISABLED） */
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.deletedAt IS NULL " +
+            "AND p.status != 'DISABLED' AND p.createdAt >= :start AND p.createdAt < :end")
+    long countByCreatedAtBetweenAndStatusNotDisabled(
+            @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 最近项目（按创建时间倒序，取前 N 条） */
+    List<Project> findTop10ByOrderByCreatedAtDesc();
 }

@@ -3,7 +3,7 @@ package com.digitaldad.ai.websocket;
 import com.digitaldad.ai.service.SpeechTranscriptionQuotaService;
 import com.digitaldad.ai.service.SpeechRecognitionService;
 import com.digitaldad.config.service.ConfigService;
-import com.digitaldad.user.enums.UserType;
+import java.util.Set;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SpeechRecognitionWebSocketHandler extends AbstractWebSocketHandler {
 
     private static final String ATTR_USER_ID = "userId";
-    private static final String ATTR_USER_TYPE = "userType";
+    private static final String ATTR_USER_ROLES = "userRoles";
     private static final String ATTR_BYTES_RECEIVED = "bytesReceived";
     private static final int BYTES_PER_SECOND = 32000;  // 16k × 16bit × 1ch
 
@@ -110,8 +110,9 @@ public class SpeechRecognitionWebSocketHandler extends AbstractWebSocketHandler 
      */
     private void performQuotaDeduct(WebSocketSession session) {
         Long userId = (Long) session.getAttributes().get(ATTR_USER_ID);
-        UserType userType = (UserType) session.getAttributes().get(ATTR_USER_TYPE);
-        if (userId == null || userType == UserType.HOST || userType == UserType.SUPER_ADMIN) {
+        @SuppressWarnings("unchecked")
+        Set<String> roles = (Set<String>) session.getAttributes().get(ATTR_USER_ROLES);
+        if (userId == null || (roles != null && (roles.contains("HOST") || roles.contains("SUPER_ADMIN")))) {
             return;
         }
         SpeechRecognitionService.VolcAsrConnection conn = getConnection(session);

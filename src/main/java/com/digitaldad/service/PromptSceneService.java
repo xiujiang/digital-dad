@@ -2,9 +2,9 @@ package com.digitaldad.prompt.service;
 
 import com.digitaldad.common.exception.BusinessException;
 import com.digitaldad.prompt.dto.*;
+import com.digitaldad.prompt.entity.Prompt;
 import com.digitaldad.prompt.entity.PromptScene;
 import com.digitaldad.prompt.entity.PromptSceneItem;
-import com.digitaldad.prompt.entity.PromptTemplate;
 import com.digitaldad.prompt.enums.PromptRoleType;
 import com.digitaldad.prompt.enums.PromptSceneScope;
 import com.digitaldad.prompt.enums.PromptStatus;
@@ -14,14 +14,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * 提示词场景服务
- * <p>管理提示词场景的增删改查及场景条目的管理，场景用于将多个模板按顺序组合成完整提示。</p>
+ * <p>管理提示词场景的增删改查及场景条目的管理，场景用于将多条提示词按顺序组合成完整提示。</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -29,7 +28,7 @@ public class PromptSceneService {
 
     private final PromptSceneRepository sceneRepository;
     private final PromptSceneItemRepository sceneItemRepository;
-    private final PromptTemplateRepository templateRepository;
+    private final PromptRepository promptRepository;
 
     /**
      * 列出场景（支持按 scope、boardCode、roleType、status 筛选）
@@ -111,26 +110,26 @@ public class PromptSceneService {
     }
 
     /**
-     * 向场景添加条目（关联模板）
+     * 向场景添加条目（关联提示词 code）
      */
     @Transactional
     public PromptSceneItemResponse addItem(Long sceneId, AddSceneItemRequest request) {
         PromptScene scene = sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new BusinessException(404, "场景不存在"));
-        if (!templateRepository.existsById(request.getTemplateId())) {
-            throw new BusinessException(404, "模板不存在");
+        if (promptRepository.findByCodeAndIsActiveTrue(request.getPromptCode()).isEmpty()) {
+            throw new BusinessException(404, "提示词不存在或未生效: " + request.getPromptCode());
         }
-        if (sceneItemRepository.existsBySceneIdAndTemplateId(sceneId, request.getTemplateId())) {
-            throw new BusinessException(400, "该模板已绑定到本场景");
+        if (sceneItemRepository.existsBySceneIdAndPromptCode(sceneId, request.getPromptCode())) {
+            throw new BusinessException(400, "该提示词已绑定到本场景");
         }
         PromptSceneItem item = new PromptSceneItem();
         item.setSceneId(sceneId);
-        item.setTemplateId(request.getTemplateId());
+        item.setPromptCode(request.getPromptCode());
         item.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
         item.setUsageMode(parseUsageMode(request.getUsageMode()));
         item = sceneItemRepository.save(item);
-        PromptTemplate t = templateRepository.findById(request.getTemplateId()).orElse(null);
-        return toItemResponse(item, t);
+        Prompt p = promptRepository.findByCodeAndIsActiveTrue(request.getPromptCode()).orElse(null);
+        return toItemResponse(item, p);
     }
 
     /**
@@ -143,8 +142,8 @@ public class PromptSceneService {
         if (request.getDisplayOrder() != null) item.setDisplayOrder(request.getDisplayOrder());
         if (request.getUsageMode() != null) item.setUsageMode(parseUsageMode(request.getUsageMode()));
         item = sceneItemRepository.save(item);
-        PromptTemplate t = templateRepository.findById(item.getTemplateId()).orElse(null);
-        return toItemResponse(item, t);
+        Prompt p = promptRepository.findByCodeAndIsActiveTrue(item.getPromptCode()).orElse(null);
+        return toItemResponse(item, p);
     }
 
     /**
@@ -170,11 +169,11 @@ public class PromptSceneService {
         List<PromptSceneItemResponse> items = null;
         if (withItems) {
             List<PromptSceneItem> itemList = sceneItemRepository.findBySceneIdOrderByDisplayOrderAsc(s.getId());
-            Map<Long, PromptTemplate> templateMap = new HashMap<>();
-            templateRepository.findAllById(itemList.stream().map(PromptSceneItem::getTemplateId).distinct().collect(Collectors.toList()))
-                    .forEach(t -> templateMap.put(t.getId(), t));
+            List<String> codes = itemList.stream().map(PromptSceneItem::getPromptCode).distinct().collect(Collectors.toList());
+            Map<String, Prompt> promptMap = promptRepository.findByCodeInAndIsActiveTrue(codes).stream()
+                    .collect(Collectors.toMap(Prompt::getCode, p -> p, (a, b) -> a));
             items = itemList.stream()
-                    .map(i -> toItemResponse(i, templateMap.get(i.getTemplateId())))
+                    .map(i -> toItemResponse(i, promptMap.get(i.getPromptCode())))
                     .collect(Collectors.toList());
         }
         return PromptSceneResponse.builder()
@@ -192,13 +191,12 @@ public class PromptSceneService {
                 .build();
     }
 
-    private PromptSceneItemResponse toItemResponse(PromptSceneItem i, PromptTemplate t) {
+    private PromptSceneItemResponse toItemResponse(PromptSceneItem i, Prompt p) {
         return PromptSceneItemResponse.builder()
                 .id(i.getId())
                 .sceneId(i.getSceneId())
-                .templateId(i.getTemplateId())
-                .templateCode(t != null ? t.getCode() : null)
-                .templateName(t != null ? t.getName() : null)
+                .promptCode(i.getPromptCode())
+                .promptName(p != null ? p.getName() : null)
                 .displayOrder(i.getDisplayOrder())
                 .usageMode(i.getUsageMode().name())
                 .build();

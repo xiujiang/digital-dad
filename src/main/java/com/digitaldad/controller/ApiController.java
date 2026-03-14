@@ -4,13 +4,11 @@ import com.digitaldad.ai.dto.SpeechQuotaResponse;
 import com.digitaldad.ai.service.SpeechTranscriptionQuotaService;
 import com.digitaldad.common.result.Result;
 import com.digitaldad.project.dto.*;
-import com.digitaldad.project.enums.ContentType;
 import com.digitaldad.project.enums.ParticipantRole;
 import com.digitaldad.project.service.*;
 import com.digitaldad.user.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,7 +28,6 @@ public class ApiController {
     private final BoardSummaryService summaryService;
     private final BoardStoryService storyService;
     private final KeyPersonService personService;
-    private final DeliverableService deliverableService;
     private final SpeechTranscriptionQuotaService speechQuotaService;
 
     // ========== C 端 - 入口与绑定 ==========
@@ -336,121 +333,4 @@ public class ApiController {
         return Result.ok();
     }
 
-    // ========== B 端 - 项目 ==========
-
-    /**
-     * 创建项目
-     *
-     * @param principal 当前登录的主持人
-     * @param request   项目信息（名称、板块等）
-     * @return 项目详情
-     */
-    @PostMapping("/api/b/projects")
-    public Result<ProjectDetailResponse> createProject(@AuthenticationPrincipal UserPrincipal principal, @Valid @RequestBody CreateProjectRequest request) {
-        return Result.ok(projectService.createProject(principal.getUserId(), request));
-    }
-
-    /**
-     * 分页列出主持人的项目
-     *
-     * @param principal 当前登录的主持人
-     * @param page      页码（从 1 开始）
-     * @param size      每页条数
-     * @return 项目列表分页数据
-     */
-    @GetMapping("/api/b/projects")
-    public Result<Page<ProjectListItemResponse>> listProjects(@AuthenticationPrincipal UserPrincipal principal,
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        return Result.ok(projectService.listProjects(principal.getUserId(), page, size));
-    }
-
-    /**
-     * 获取项目详情
-     *
-     * @param principal 当前登录的主持人
-     * @param id        项目 ID
-     * @return 项目详情
-     */
-    @GetMapping("/api/b/projects/{id}")
-    public Result<ProjectDetailResponse> getProjectDetail(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id) {
-        return Result.ok(projectService.getProjectDetail(id, principal.getUserId()));
-    }
-
-    /**
-     * 获取项目分享入口信息（用于生成分享链接）
-     *
-     * @param principal 当前登录的主持人
-     * @param id        项目 ID
-     * @return 分享令牌等信息
-     */
-    @GetMapping("/api/b/projects/{id}/share")
-    public Result<ShareEntryResponse> getShareEntry(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id) {
-        return Result.ok(projectService.getShareEntry(id, principal.getUserId()));
-    }
-
-    // ========== B 端 - 交付物 ==========
-
-    /**
-     * 生成交付物（AI 根据项目内容生成）
-     *
-     * @param principal  当前登录的主持人
-     * @param projectId  项目 ID
-     * @param request    生成参数（内容类型等）
-     * @return 交付物详情
-     */
-    @PostMapping("/api/b/projects/{projectId}/deliverables/generate")
-    public Result<DeliverableDetailResponse> generateDeliverable(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long projectId, @Valid @RequestBody GenerateDeliverableRequest request) {
-        return Result.ok(deliverableService.generate(projectId, principal.getUserId(), request));
-    }
-
-    /**
-     * 按内容类型获取项目交付物
-     *
-     * @param principal   当前登录的主持人
-     * @param projectId   项目 ID
-     * @param contentType 内容类型
-     * @return 交付物详情
-     */
-    @GetMapping("/api/b/projects/{projectId}/deliverables/{contentType}")
-    public Result<DeliverableDetailResponse> getDeliverableByType(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long projectId, @PathVariable ContentType contentType) {
-        return Result.ok(deliverableService.getDetail(projectId, contentType, principal.getUserId()));
-    }
-
-    /**
-     * 根据 ID 获取交付物详情
-     *
-     * @param principal 当前登录的主持人
-     * @param id        交付物 ID
-     * @return 交付物详情
-     */
-    @GetMapping("/api/b/deliverables/{id}")
-    public Result<DeliverableDetailResponse> getDeliverableById(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id) {
-        return Result.ok(deliverableService.getById(id, principal.getUserId()));
-    }
-
-    /**
-     * 更新交付物内容
-     *
-     * @param principal 当前登录的主持人
-     * @param id        交付物 ID
-     * @param request   更新内容
-     * @return 更新后的交付物
-     */
-    @PutMapping("/api/b/deliverables/{id}")
-    public Result<DeliverableDetailResponse> updateDeliverable(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id, @Valid @RequestBody UpdateDeliverableRequest request) {
-        return Result.ok(deliverableService.update(id, principal.getUserId(), request));
-    }
-
-    /**
-     * 删除交付物
-     *
-     * @param principal 当前登录的主持人
-     * @param id        交付物 ID
-     * @return 成功时返回空结果
-     */
-    @DeleteMapping("/api/b/deliverables/{id}")
-    public Result<Void> deleteDeliverable(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id) {
-        deliverableService.delete(id, principal.getUserId());
-        return Result.ok();
-    }
 }

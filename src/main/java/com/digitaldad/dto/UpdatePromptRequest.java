@@ -4,10 +4,10 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 更新提示词模板请求
+ * 更新提示词请求（按 id 更新当前行）
  */
 @Data
-public class UpdatePromptTemplateRequest {
+public class UpdatePromptRequest {
 
     @Size(max = 100)
     private String name;
@@ -18,4 +18,6 @@ public class UpdatePromptTemplateRequest {
     private String description;
 
     private String status;
+
+    private String content;
 }

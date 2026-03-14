@@ -6,7 +6,7 @@ import com.digitaldad.common.exception.BusinessException;
 import com.digitaldad.config.service.ConfigService;
 import com.digitaldad.user.entity.UserQuota;
 import com.digitaldad.user.enums.QuotaType;
-import com.digitaldad.user.enums.UserType;
+import java.util.Set;
 import com.digitaldad.user.repository.UserQuotaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,10 +39,10 @@ public class SpeechTranscriptionQuotaService {
     }
 
     /**
-     * 预检查：WECHAT_USER 需 remaining > 0，HOST/SUPER_ADMIN 直接放行
+     * 预检查：具备 HOST 或 SUPER_ADMIN 角色直接放行，否则需 remaining > 0
      */
-    public void checkQuotaForConnect(Long userId, UserType userType) {
-        if (userType == UserType.HOST || userType == UserType.SUPER_ADMIN) {
+    public void checkQuotaForConnect(Long userId, Set<String> roles) {
+        if (roles != null && (roles.contains("HOST") || roles.contains("SUPER_ADMIN"))) {
             return;
         }
         int remaining = getOrInitQuota(userId).remainingSeconds();

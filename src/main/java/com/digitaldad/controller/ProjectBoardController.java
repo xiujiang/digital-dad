@@ -16,7 +16,7 @@ import java.util.List;
  * <p>提供项目中板块的列表、新增、修改、删除，板块对应采访的不同主题（如新郎、新娘等）。</p>
  */
 @RestController
-@RequestMapping("/api/b/projects/{projectId}/boards")
+@RequestMapping("/api/projects/{projectId}/boards")
 @RequiredArgsConstructor
 public class ProjectBoardController {
 

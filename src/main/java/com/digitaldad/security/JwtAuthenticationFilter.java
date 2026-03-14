@@ -1,6 +1,5 @@
 package com.digitaldad.user.security;
 
-import com.digitaldad.user.enums.UserType;
 import com.digitaldad.user.util.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,10 +16,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * JWT 认证过滤器
+ * JWT 认证过滤器（支持多角色）
  */
 @Component
 @RequiredArgsConstructor
@@ -39,12 +40,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = extractToken(request);
             if (StringUtils.hasText(token)) {
                 Long userId = jwtUtils.getUserId(token);
-                UserType userType = jwtUtils.getUserType(token);
+                List<String> roles = jwtUtils.getRoles(token);
 
-                var authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + userType.name()));
+                var authorities = roles.stream()
+                        .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                        .collect(Collectors.toList());
                 var auth = new UsernamePasswordAuthenticationToken(
-                        new UserPrincipal(userId, userType),
+                        new UserPrincipal(userId, new HashSet<>(roles)),
                         null,
                         authorities);
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

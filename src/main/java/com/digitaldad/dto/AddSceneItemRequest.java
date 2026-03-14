@@ -1,16 +1,18 @@
 package com.digitaldad.prompt.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 场景绑定模板请求
+ * 场景绑定提示词请求
  */
 @Data
 public class AddSceneItemRequest {
 
-    @NotNull(message = "模板ID不能为空")
-    private Long templateId;
+    @NotBlank(message = "提示词编码不能为空")
+    @Size(max = 64)
+    private String promptCode;
 
     private Integer displayOrder = 0;
 

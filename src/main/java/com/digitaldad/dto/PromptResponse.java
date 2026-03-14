@@ -6,11 +6,11 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 提示词模板响应
+ * 提示词响应（单行：当前生效或指定版本）
  */
 @Data
 @Builder
-public class PromptTemplateResponse {
+public class PromptResponse {
 
     private Long id;
     private String code;
@@ -18,9 +18,10 @@ public class PromptTemplateResponse {
     private String contentType;
     private String description;
     private String status;
+    private Integer versionNo;
+    private String content;
+    private Boolean isActive;
     private LocalDateTime createdAt;
+    private Long createdBy;
     private LocalDateTime updatedAt;
-
-    /** 当前生效版本号 */
-    private Integer activeVersionNo;
 }

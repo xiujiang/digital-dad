@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "digital-dad-api-2024",
 		"name": "数字爸爸 API",
-		"description": "数字爸爸 - 婚礼采访与生成平台 API 测试用例\n\n使用说明：\n1. 先调用「认证-发送验证码」获取验证码\n2. 调用「认证-主持人登录」或「认证-超管登录」获取 token\n3. 将 token 保存到 collection 变量 token 中（登录接口的 Tests 脚本已自动处理）\n4. 需认证接口会自动使用 Authorization: Bearer {{token}}",
+		"description": "数字爸爸 - 婚礼采访与生成平台 API 测试用例\n\n使用说明：\n1. 先调用「认证-发送验证码」获取验证码\n2. 调用「认证-主持人登录」或「认证-超管登录」获取 token（均为 POST /api/auth/login，超管登录时 body 增加 \"admin\": true）\n3. 主持人 token 存入变量 token，超管 token 存入 adminToken（登录接口 Tests 已自动处理）\n4. 当前用户、项目、板块、用户资料等统一路径，主持人/超管用各自 token 即可\n5. 需认证接口使用 Authorization: Bearer {{token}} 或 {{adminToken}}",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -62,7 +62,7 @@
 					}
 				},
 				{
-					"name": "主持人登录",
+					"name": "主持人登录(admin不传或false)",
 					"event": [
 						{
 							"listen": "test",
@@ -83,7 +83,7 @@
 					}
 				},
 				{
-					"name": "主持人-当前用户",
+					"name": "当前用户(主持人/超管共用)",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
@@ -91,7 +91,7 @@
 					}
 				},
 				{
-					"name": "主持人-退出登录",
+					"name": "退出登录",
 					"request": {
 						"method": "POST",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
@@ -99,7 +99,7 @@
 					}
 				},
 				{
-					"name": "超管登录",
+					"name": "超管登录(admin:true)",
 					"event": [
 						{
 							"listen": "test",
@@ -114,17 +114,17 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"123456\"\n}"
+							"raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"123456\",\n  \"admin\": true\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/auth/login"
+						"url": "{{baseUrl}}/api/auth/login"
 					}
 				},
 				{
-					"name": "超管-当前用户",
+					"name": "当前用户(超管token)",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/auth/me"
+						"url": "{{baseUrl}}/api/auth/me"
 					}
 				}
 			]
@@ -382,7 +382,7 @@
 			]
 		},
 		{
-			"name": "主持人B端-项目",
+			"name": "项目(主持人/超管)",
 			"item": [
 				{
 					"name": "创建项目",
@@ -396,7 +396,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"groomName\": \"张先生\",\n  \"brideName\": \"李女士\",\n  \"weddingDate\": \"2025-06-01\"\n}"
 						},
-						"url": "{{baseUrl}}/api/b/projects"
+						"url": "{{baseUrl}}/api/projects"
 					}
 				},
 				{
@@ -404,7 +404,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/projects?page=1&size=10"
+						"url": "{{baseUrl}}/api/projects?page=1&size=10"
 					}
 				},
 				{
@@ -412,7 +412,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}"
 					}
 				},
 				{
@@ -420,20 +420,20 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/share"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/share"
 					}
 				}
 			]
 		},
 		{
-			"name": "主持人B端-板块",
+			"name": "项目下板块",
 			"item": [
 				{
 					"name": "板块列表",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/boards"
 					}
 				},
 				{
@@ -448,7 +448,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"boardMetaId\": 1,\n  \"displayOrder\": 0\n}"
 						},
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/boards"
 					}
 				},
 				{
@@ -463,7 +463,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"displayOrder\": 1\n}"
 						},
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards/1"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/boards/1"
 					}
 				},
 				{
@@ -471,7 +471,7 @@
 					"request": {
 						"method": "DELETE",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/boards/1"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/boards/1"
 					}
 				},
 				{
@@ -479,13 +479,13 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/board-meta/enabled"
+						"url": "{{baseUrl}}/api/board-meta/enabled"
 					}
 				}
 			]
 		},
 		{
-			"name": "主持人B端-交付物",
+			"name": "交付物",
 			"item": [
 				{
 					"name": "生成交付物",
@@ -499,7 +499,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"contentType\": \"OPENING_SPEECH\"\n}"
 						},
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/deliverables/generate"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/deliverables/generate"
 					}
 				},
 				{
@@ -507,7 +507,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/projects/{{projectId}}/deliverables/OPENING_SPEECH"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/deliverables/OPENING_SPEECH"
 					}
 				},
 				{
@@ -515,7 +515,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/deliverables/{{deliverableId}}"
+						"url": "{{baseUrl}}/api/deliverables/{{deliverableId}}"
 					}
 				},
 				{
@@ -530,7 +530,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"title\": \"婚礼开场白\",\n  \"content\": \"尊敬的各位来宾...\"\n}"
 						},
-						"url": "{{baseUrl}}/api/b/deliverables/{{deliverableId}}"
+						"url": "{{baseUrl}}/api/deliverables/{{deliverableId}}"
 					}
 				},
 				{
@@ -538,20 +538,20 @@
 					"request": {
 						"method": "DELETE",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/deliverables/{{deliverableId}}"
+						"url": "{{baseUrl}}/api/deliverables/{{deliverableId}}"
 					}
 				}
 			]
 		},
 		{
-			"name": "主持人B端-用户",
+			"name": "用户/当前用户资料",
 			"item": [
 				{
 					"name": "我的资料",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/b/users/me"
+						"url": "{{baseUrl}}/api/users/me"
 					}
 				},
 				{
@@ -566,20 +566,20 @@
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"主持人张三\",\n  \"phone\": \"13800138000\",\n  \"contactVisible\": \"HIDDEN\"\n}"
 						},
-						"url": "{{baseUrl}}/api/b/users/me"
+						"url": "{{baseUrl}}/api/users/me"
 					}
 				}
 			]
 		},
 		{
-			"name": "超管-主持人管理",
+			"name": "用户管理(仅超管)",
 			"item": [
 				{
 					"name": "主持人列表",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/hosts?page=1&size=10"
+						"url": "{{baseUrl}}/api/users?page=1&size=10"
 					}
 				},
 				{
@@ -594,7 +594,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"phone\": \"13900139000\",\n  \"name\": \"新主持人\",\n  \"initialQuota\": 10\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/hosts"
+						"url": "{{baseUrl}}/api/users"
 					}
 				},
 				{
@@ -602,7 +602,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}"
+						"url": "{{baseUrl}}/api/users/{{hostId}}"
 					}
 				},
 				{
@@ -617,7 +617,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"status\": \"ENABLED\"\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/status"
+						"url": "{{baseUrl}}/api/users/{{hostId}}/status"
 					}
 				},
 				{
@@ -632,7 +632,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"packageCode\": \"annual\"\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/activate-member"
+						"url": "{{baseUrl}}/api/users/{{hostId}}/activate-member"
 					}
 				},
 				{
@@ -647,7 +647,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"delta\": 10,\n  \"reason\": \"活动赠送\"\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/quota"
+						"url": "{{baseUrl}}/api/users/{{hostId}}/quota"
 					}
 				},
 				{
@@ -655,20 +655,20 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/hosts/{{hostId}}/quota-flows?page=1&size=10"
+						"url": "{{baseUrl}}/api/users/{{hostId}}/quota-flows?page=1&size=10"
 					}
 				}
 			]
 		},
 		{
-			"name": "超管-项目管理",
+			"name": "项目(超管-同路径)",
 			"item": [
 				{
 					"name": "项目列表",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/projects?page=1&size=10"
+						"url": "{{baseUrl}}/api/projects?page=1&size=10"
 					}
 				},
 				{
@@ -676,20 +676,20 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/projects/{{projectId}}"
+						"url": "{{baseUrl}}/api/projects/{{projectId}}"
 					}
 				}
 			]
 		},
 		{
-			"name": "超管-板块元数据",
+			"name": "板块元数据(主持人/超管)",
 			"item": [
 				{
 					"name": "板块元数据列表",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/board-meta"
+						"url": "{{baseUrl}}/api/board-meta"
 					}
 				},
 				{
@@ -697,7 +697,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/board-meta/1"
+						"url": "{{baseUrl}}/api/board-meta/1"
 					}
 				},
 				{
@@ -712,7 +712,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"code\": \"wedding_intro\",\n  \"name\": \"婚礼介绍\",\n  \"displayOrder\": 0,\n  \"description\": \"婚礼开场介绍\",\n  \"status\": \"ENABLED\"\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/board-meta"
+						"url": "{{baseUrl}}/api/board-meta"
 					}
 				},
 				{
@@ -727,7 +727,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"婚礼介绍(更新)\",\n  \"displayOrder\": 1,\n  \"description\": \"更新描述\",\n  \"status\": \"ENABLED\"\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/board-meta/1"
+						"url": "{{baseUrl}}/api/board-meta/1"
 					}
 				},
 				{
@@ -735,7 +735,7 @@
 					"request": {
 						"method": "DELETE",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/board-meta/1"
+						"url": "{{baseUrl}}/api/board-meta/1"
 					}
 				}
 			]

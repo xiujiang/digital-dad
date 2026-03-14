@@ -40,6 +40,9 @@ public class Project {
     @Column(name = "wedding_date")
     private LocalDate weddingDate;
 
+    @Column(name = "theme", length = 200)
+    private String theme;
+
     @Column(name = "share_token", nullable = false, unique = true, length = 64)
     private String shareToken;
 
