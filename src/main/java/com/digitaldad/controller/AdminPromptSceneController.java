@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * 超管 - 提示词场景管理
- * <p>提供场景的增删改查及场景下条目的管理，场景用于组合多个提示词模板形成完整提示。</p>
+ * <p>提供场景的增删改查及场景下条目的管理，场景用于组合多条提示词形成完整提示。</p>
  */
 @RestController
 @RequestMapping("/api/admin/prompt-scenes")
@@ -87,7 +87,7 @@ public class AdminPromptSceneController {
     }
 
     /**
-     * 向场景添加条目（关联提示词模板及顺序）
+     * 向场景添加条目（关联提示词及顺序）
      *
      * @param id      场景 ID
      * @param request 条目信息

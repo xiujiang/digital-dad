@@ -2,7 +2,6 @@ package com.digitaldad.ai.websocket;
 
 import com.digitaldad.ai.service.SpeechTranscriptionQuotaService;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.user.enums.UserType;
 import com.digitaldad.user.security.UserPrincipal;
 import com.digitaldad.user.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,7 @@ public class SpeechRecognitionHandshakeInterceptor implements HandshakeIntercept
 
     private static final String TOKEN_PARAM = "token";
     private static final String ATTR_USER_ID = "userId";
-    private static final String ATTR_USER_TYPE = "userType";
+    private static final String ATTR_USER_ROLES = "userRoles";
 
     private final JwtUtils jwtUtils;
     private final SpeechTranscriptionQuotaService quotaService;
@@ -47,22 +46,22 @@ public class SpeechRecognitionHandshakeInterceptor implements HandshakeIntercept
         UserPrincipal principal;
         try {
             Long userId = jwtUtils.getUserId(token);
-            UserType userType = jwtUtils.getUserType(token);
-            principal = new UserPrincipal(userId, userType);
+            java.util.Set<String> roles = new java.util.HashSet<>(jwtUtils.getRoles(token));
+            principal = new UserPrincipal(userId, roles);
         } catch (Exception e) {
             log.warn("语音识别 WebSocket token 解析失败", e);
             return false;
         }
 
         try {
-            quotaService.checkQuotaForConnect(principal.getUserId(), principal.getUserType());
+            quotaService.checkQuotaForConnect(principal.getUserId(), principal.getRoles());
         } catch (BusinessException e) {
             log.info("语音识别 WebSocket 握手拒绝：{}", e.getMessage());
             return false;
         }
 
         attributes.put(ATTR_USER_ID, principal.getUserId());
-        attributes.put(ATTR_USER_TYPE, principal.getUserType());
+        attributes.put(ATTR_USER_ROLES, principal.getRoles());
         return true;
     }
 

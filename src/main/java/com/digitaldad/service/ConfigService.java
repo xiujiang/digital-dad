@@ -2,6 +2,7 @@ package com.digitaldad.config.service;
 
 import com.digitaldad.common.exception.BusinessException;
 import com.digitaldad.config.dto.MemberPackageConfigDto;
+import com.digitaldad.config.dto.PasswordPolicyConfigDto;
 import com.digitaldad.config.entity.SysConfig;
 import com.digitaldad.config.repository.SysConfigRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class ConfigService {
     public static final String KEY_MEMBER_PACKAGES = "member.packages";
     public static final String KEY_SPEECH_TRANSCRIPTION = "speech.transcription";
     public static final String KEY_INTERVIEW = "interview";
+    public static final String KEY_PASSWORD_POLICY = "security.password_policy";
 
     private final SysConfigRepository sysConfigRepository;
 
@@ -113,6 +115,53 @@ public class ConfigService {
         } catch (Exception e) {
             return 10;  // 兜底默认 10 轮
         }
+    }
+
+    /**
+     * 获取密码策略配置（不存在时返回默认值）
+     */
+    public PasswordPolicyConfigDto getPasswordPolicy() {
+        return sysConfigRepository.findByConfigKey(KEY_PASSWORD_POLICY)
+                .map(SysConfig::getConfigValue)
+                .filter(v -> v != null && !v.isEmpty())
+                .map(this::mapToPasswordPolicy)
+                .orElseGet(PasswordPolicyConfigDto::new);
+    }
+
+    /**
+     * 更新密码策略配置
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public PasswordPolicyConfigDto updatePasswordPolicy(PasswordPolicyConfigDto dto) {
+        SysConfig config = sysConfigRepository.findByConfigKey(KEY_PASSWORD_POLICY)
+                .orElseGet(() -> {
+                    SysConfig c = new SysConfig();
+                    c.setConfigKey(KEY_PASSWORD_POLICY);
+                    c.setDescription("密码策略：强制强密码、定期修改密码");
+                    return c;
+                });
+        config.setConfigValue(Map.of(
+                "enforceStrongPassword", dto.getEnforceStrongPassword() != null ? dto.getEnforceStrongPassword() : true,
+                "requirePasswordChangePeriodically", dto.getRequirePasswordChangePeriodically() != null ? dto.getRequirePasswordChangePeriodically() : false,
+                "passwordChangeIntervalDays", dto.getPasswordChangeIntervalDays() != null ? dto.getPasswordChangeIntervalDays() : 90
+        ));
+        sysConfigRepository.save(config);
+        return getPasswordPolicy();
+    }
+
+    private PasswordPolicyConfigDto mapToPasswordPolicy(Map<String, Object> map) {
+        PasswordPolicyConfigDto dto = new PasswordPolicyConfigDto();
+        dto.setEnforceStrongPassword(getBoolean(map, "enforceStrongPassword", true));
+        dto.setRequirePasswordChangePeriodically(getBoolean(map, "requirePasswordChangePeriodically", false));
+        dto.setPasswordChangeIntervalDays(getIntOrNull(map, "passwordChangeIntervalDays") != null ? getIntOrNull(map, "passwordChangeIntervalDays") : 90);
+        return dto;
+    }
+
+    private boolean getBoolean(Map<String, Object> map, String key, boolean defaultValue) {
+        Object v = map.get(key);
+        if (v == null) return defaultValue;
+        if (v instanceof Boolean) return (Boolean) v;
+        return Boolean.parseBoolean(v.toString());
     }
 
     private Integer getIntOrNull(Map<String, Object> map, String key) {

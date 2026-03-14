@@ -21,4 +21,8 @@ public class CreateProjectRequest {
     private String brideName;
 
     private LocalDate weddingDate;
+
+    /** 婚礼主题（如：婚礼故事采访、浪漫秋日婚礼等） */
+    @Size(max = 200)
+    private String theme;
 }

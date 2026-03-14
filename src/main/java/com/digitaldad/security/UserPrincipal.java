@@ -1,24 +1,34 @@
 package com.digitaldad.user.security;
 
-import com.digitaldad.user.enums.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Collections;
+import java.util.Set;
+
 /**
- * 当前登录用户主体
+ * 当前登录用户主体（支持多角色）
  */
 @Getter
 @AllArgsConstructor
 public class UserPrincipal {
 
     private final Long userId;
-    private final UserType userType;
+    private final Set<String> roles;
 
     public boolean isHost() {
-        return userType == UserType.HOST;
+        return roles != null && roles.contains("HOST");
     }
 
     public boolean isSuperAdmin() {
-        return userType == UserType.SUPER_ADMIN;
+        return roles != null && roles.contains("SUPER_ADMIN");
+    }
+
+    public boolean hasRole(String role) {
+        return roles != null && roles.contains(role);
+    }
+
+    public Set<String> getRoles() {
+        return roles != null ? roles : Collections.emptySet();
     }
 }

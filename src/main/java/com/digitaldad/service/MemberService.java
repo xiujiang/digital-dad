@@ -7,9 +7,9 @@ import com.digitaldad.user.entity.User;
 import com.digitaldad.user.entity.UserMember;
 import com.digitaldad.user.enums.MemberStatus;
 import com.digitaldad.user.enums.QuotaType;
-import com.digitaldad.user.enums.UserType;
 import com.digitaldad.user.repository.UserMemberRepository;
 import com.digitaldad.user.repository.UserRepository;
+import com.digitaldad.user.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,8 +25,10 @@ import java.time.LocalDateTime;
 public class MemberService {
 
     private static final String MEMBER_TYPE_HOST = "HOST";
+    private static final String ROLE_HOST = "HOST";
 
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final UserMemberRepository userMemberRepository;
     private final UserQuotaService userQuotaService;
     private final ConfigService configService;
@@ -41,7 +43,7 @@ public class MemberService {
     public void activateMembership(Long userId, String packageCode) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));
-        if (user.getUserType() != UserType.HOST) {
+        if (!userRoleRepository.existsByUserIdAndRole(userId, ROLE_HOST)) {
             throw new BusinessException(400, "仅支持为主持人开通会员");
         }
 

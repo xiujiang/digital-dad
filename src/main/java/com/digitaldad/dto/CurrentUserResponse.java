@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * 当前用户信息响应
  */
@@ -16,6 +18,7 @@ public class CurrentUserResponse {
 
     private Long userId;
     private String userType;
+    private List<String> roles;
     private String name;
     private String phone;
     private String avatarUrl;

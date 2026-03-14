@@ -18,6 +18,7 @@ public class ProjectDetailResponse {
     private String projectNo;
     private String groomName;
     private String brideName;
+    private String theme;
     private LocalDate weddingDate;
     private String status;
     private String shareToken;

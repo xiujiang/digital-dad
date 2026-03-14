@@ -32,10 +32,23 @@ jwt:
 sms:
   code-expire-seconds: 300   # 5分钟
   send-interval-seconds: 60  # 60秒内不可重复获取
+  # 腾讯云短信（配置 SecretId/SecretKey 后真实发送，未配置则仅打印日志。通过环境变量配置，勿提交敏感信息）
+  tencent:
+    secret-id: ${TENCENT_SMS_SECRET_ID:1401093377}
+    secret-key: ${TENCENT_SMS_SECRET_KEY:875b38cb05fd9d1fb870bc30c2b9812a}
+    sdk-app-id: ${TENCENT_SMS_SDK_APP_ID:1401093377}
+    sign-name: ${TENCENT_SMS_SIGN_NAME:舟山市新城踏浪文化}
+    template-id: ${TENCENT_SMS_TEMPLATE_ID:2609865}
+    region: ${TENCENT_SMS_REGION:ap-guangzhou}
 
 # 应用配置
 app:
   base-url: http://localhost:8080  # C端分享链接、二维码 base，生产环境需改为实际域名
+  # 微信小程序（用于 C 端扫码登录：小程序将 code 发到后端，后端 code2session 换 openid 并签发 JWT）
+  wechat:
+    miniprogram:
+      app-id: ${WECHAT_MINI_APP_ID:}
+      app-secret: ${WECHAT_MINI_APP_SECRET:}
   ai:
     enabled: ${APP_AI_ENABLED:true}  # 是否启用真实 AI，默认 true
   # DeepSeek 大模型（通过环境变量覆盖，勿提交敏感信息）

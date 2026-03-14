@@ -24,6 +24,6 @@ public class PromptSceneResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    /** 绑定的模板项列表 */
+    /** 绑定的提示词项列表 */
     private List<PromptSceneItemResponse> items;
 }

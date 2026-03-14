@@ -8,10 +8,10 @@ import com.digitaldad.user.entity.UserMember;
 import com.digitaldad.user.entity.UserQuota;
 import com.digitaldad.user.enums.MemberStatus;
 import com.digitaldad.user.enums.QuotaType;
-import com.digitaldad.user.enums.UserType;
 import com.digitaldad.user.repository.UserMemberRepository;
 import com.digitaldad.user.repository.UserQuotaRepository;
 import com.digitaldad.user.repository.UserRepository;
+import com.digitaldad.user.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +27,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class HostUserService {
 
+    private static final String ROLE_HOST = "HOST";
+
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final UserMemberRepository userMemberRepository;
     private final UserQuotaRepository userQuotaRepository;
 
@@ -37,12 +40,13 @@ public class HostUserService {
     public HostProfileResponse getProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));
-        if (user.getUserType() != UserType.HOST) {
+        if (!userRoleRepository.existsByUserIdAndRole(userId, ROLE_HOST)) {
             throw new BusinessException(403, "非主持人账号");
         }
 
         int remainingQuota = 0;
         String packageName = null;
+        Integer packageQuota = null;
         LocalDateTime validTo = null;
         boolean memberEnabled = false;
 
@@ -55,6 +59,7 @@ public class HostUserService {
         if (memberOpt.isPresent()) {
             UserMember m = memberOpt.get();
             packageName = m.getPackageName();
+            packageQuota = m.getPackageQuota();
             validTo = m.getValidTo();
             memberEnabled = m.getStatus() == MemberStatus.ACTIVE
                     && (m.getValidTo() == null || m.getValidTo().isAfter(LocalDateTime.now()));
@@ -70,6 +75,7 @@ public class HostUserService {
                 .contactVisible(user.getContactVisible())
                 .memberEnabled(memberEnabled)
                 .packageName(packageName)
+                .packageQuota(packageQuota)
                 .remainingQuota(remainingQuota)
                 .validTo(validTo)
                 .status(user.getStatus().name())
@@ -83,7 +89,7 @@ public class HostUserService {
     public void updateProfile(Long userId, UpdateHostProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));
-        if (user.getUserType() != UserType.HOST) {
+        if (!userRoleRepository.existsByUserIdAndRole(userId, ROLE_HOST)) {
             throw new BusinessException(403, "非主持人账号");
         }
 

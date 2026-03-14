@@ -5,10 +5,10 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 创建提示词模板请求
+ * 创建提示词请求（含首版正文）
  */
 @Data
-public class CreatePromptTemplateRequest {
+public class CreatePromptRequest {
 
     @NotBlank(message = "编码不能为空")
     @Size(max = 64)
@@ -24,4 +24,7 @@ public class CreatePromptTemplateRequest {
     private String description;
 
     private String status = "ENABLED";
+
+    @NotBlank(message = "提示词正文不能为空")
+    private String content;
 }

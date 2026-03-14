@@ -2,7 +2,6 @@ package com.digitaldad.user.entity;
 
 import com.digitaldad.user.enums.ContactVisible;
 import com.digitaldad.user.enums.UserStatus;
-import com.digitaldad.user.enums.UserType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,10 +26,6 @@ public class User {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "user_type", nullable = false, length = 20)
-    private UserType userType;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status = UserStatus.ENABLED;
 
@@ -42,6 +37,14 @@ public class User {
 
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
+
+    /** 密码哈希（BCrypt），可为空；设置后支持手机号+密码登录 */
+    @Column(name = "password_hash", length = 128)
+    private String passwordHash;
+
+    /** 最后修改密码时间（用于定期修改密码策略） */
+    @Column(name = "last_password_changed_at")
+    private LocalDateTime lastPasswordChangedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "contact_visible", length = 20)

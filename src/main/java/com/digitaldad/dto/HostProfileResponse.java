@@ -31,6 +31,9 @@ public class HostProfileResponse {
     /** 套餐名称 */
     private String packageName;
 
+    /** 套餐总次数 */
+    private Integer packageQuota;
+
     /** 剩余配额 */
     private Integer remainingQuota;
 

@@ -1,17 +1,26 @@
 package com.digitaldad.user.service;
 
+import com.digitaldad.common.config.TencentSmsProperties;
 import com.digitaldad.common.exception.BusinessException;
 import com.digitaldad.user.enums.SmsScene;
+import com.tencentcloudapi.common.Credential;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
+import com.tencentcloudapi.sms.v20210111.SmsClient;
+import com.tencentcloudapi.sms.v20210111.models.SendSmsRequest;
+import com.tencentcloudapi.sms.v20210111.models.SendSmsResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 短信验证码服务（v0.1 使用内存存储，模拟发送）
+ * 短信验证码服务
+ * <p>配置了腾讯云 SecretId/SecretKey 时真实发送，未配置时仅打印日志（便于开发测试）</p>
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SmsService {
 
     private static final String KEY_CODE = "sms:code:";
@@ -19,6 +28,7 @@ public class SmsService {
     private static final int CODE_EXPIRE_SECONDS = 300;  // 5分钟
     private static final int LIMIT_SECONDS = 60;         // 60秒内只能发一次
 
+    private final TencentSmsProperties tencentSmsProps;
     private final ConcurrentHashMap<String, CodeEntry> codeStore = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> limitStore = new ConcurrentHashMap<>();
 
@@ -33,7 +43,8 @@ public class SmsService {
     }
 
     /**
-     * 发送验证码（v0.1 内存存储，模拟发送）
+     * 发送验证码
+     * <p>配置了腾讯云则真实发送，否则仅打印日志</p>
      *
      * @param phone 手机号
      * @param scene 场景（如 LOGIN）
@@ -52,8 +63,48 @@ public class SmsService {
         codeStore.put(codeKey, new CodeEntry(code, now + CODE_EXPIRE_SECONDS * 1000L));
         limitStore.put(limitKey, now + LIMIT_SECONDS * 1000L);
 
-        // v0.1 模拟发送，仅打印日志便于测试
-        log.info("[SMS] 验证码已发送 phone={}, scene={}, code={}", phone, scene, code);
+        if (tencentSmsProps.isEnabled()) {
+            doSendTencentSms(phone, code);
+        } else {
+            log.info("[SMS] 模拟发送（未配置腾讯云） phone={}, scene={}, code={}", phone, scene, code);
+        }
+    }
+
+    private void doSendTencentSms(String phone, String code) {
+        try {
+            String e164 = normalizePhone(phone);
+            Credential cred = new Credential(tencentSmsProps.getSecretId(), tencentSmsProps.getSecretKey());
+            SmsClient client = new SmsClient(cred, tencentSmsProps.getRegion());
+
+            SendSmsRequest req = new SendSmsRequest();
+            req.setPhoneNumberSet(new String[]{e164});
+            req.setSmsSdkAppId(tencentSmsProps.getSdkAppId());
+            req.setSignName(tencentSmsProps.getSignName());
+            req.setTemplateId(tencentSmsProps.getTemplateId());
+            req.setTemplateParamSet(new String[]{code});
+
+            SendSmsResponse resp = client.SendSms(req);
+            if (resp.getSendStatusSet() != null && resp.getSendStatusSet().length > 0) {
+                String errCode = resp.getSendStatusSet()[0].getCode();
+                if (!"Ok".equalsIgnoreCase(errCode)) {
+                    String errMsg = resp.getSendStatusSet()[0].getMessage();
+                    log.error("[SMS] 腾讯云发送失败 phone={}, errCode={}, errMsg={}", phone, errCode, errMsg);
+                    throw new BusinessException(500, "短信发送失败: " + errMsg);
+                }
+            }
+            log.info("[SMS] 验证码已发送 phone={}", phone);
+        } catch (TencentCloudSDKException e) {
+            log.error("[SMS] 腾讯云 SDK 异常 phone={}", phone, e);
+            throw new BusinessException(500, "短信发送失败，请稍后重试");
+        }
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null) return "";
+        String s = phone.trim().replaceAll("\\s+", "");
+        if (s.startsWith("+86")) return s;
+        if (s.startsWith("86") && s.length() > 10) return "+" + s;
+        return "+86" + s;
     }
 
     /**

@@ -6,15 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 /**
- * 场景-模板绑定 Repository
+ * 场景-提示词绑定 Repository
  */
 public interface PromptSceneItemRepository extends JpaRepository<PromptSceneItem, Long> {
 
     List<PromptSceneItem> findBySceneIdOrderByDisplayOrderAsc(Long sceneId);
 
-    boolean existsBySceneIdAndTemplateId(Long sceneId, Long templateId);
+    boolean existsBySceneIdAndPromptCode(Long sceneId, String promptCode);
 
-    boolean existsByTemplateId(Long templateId);
-
-    void deleteBySceneIdAndTemplateId(Long sceneId, Long templateId);
+    boolean existsByPromptCode(String promptCode);
 }

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class PromptVersionResponse {
 
     private Long id;
-    private Long templateId;
+    private String code;
     private Integer versionNo;
     private String content;
     private Boolean isActive;

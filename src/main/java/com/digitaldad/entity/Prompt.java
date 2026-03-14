@@ -9,19 +9,21 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * 提示词模板（原子单位）
+ * 提示词（同一 code 多行表示多版本，is_active=1 为当前生效）
  */
 @Getter
 @Setter
 @Entity
-@Table(name = "prompt_template")
-public class PromptTemplate {
+@Table(name = "prompt", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"code", "version_no"})
+})
+public class Prompt {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code", nullable = false, unique = true, length = 64)
+    @Column(name = "code", nullable = false, length = 64)
     private String code;
 
     @Column(name = "name", nullable = false, length = 100)
@@ -38,8 +40,20 @@ public class PromptTemplate {
     @Column(name = "status", nullable = false, length = 20)
     private PromptStatus status = PromptStatus.ENABLED;
 
+    @Column(name = "version_no", nullable = false)
+    private Integer versionNo = 1;
+
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "created_by")
+    private Long createdBy;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
