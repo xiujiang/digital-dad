@@ -1,4 +1,4 @@
-package com.digitaldad.project.entity;
+package com.digitaldad.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,10 +19,13 @@ public class KeyPerson {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "session_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "session_id")
     private Long sessionId;
 
-    @Column(name = "participant_id", nullable = false)
+    @Column(name = "participant_id")
     private Long participantId;
 
     @Column(name = "name", nullable = false, length = 50)

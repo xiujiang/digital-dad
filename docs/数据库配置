@@ -9,3 +9,6 @@
 项目启动：
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot"
 .\mvnw.cmd spring-boot:run
+
+
+cd /Users/joel/IdeaProjects/digital-dad && rm -rf target && export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home && export PATH="$JAVA_HOME/bin:$PATH" && mvn -Dmaven.test.skip=true spring-boot:run

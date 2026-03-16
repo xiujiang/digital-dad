@@ -1,8 +1,8 @@
-package com.digitaldad.ai.websocket;
+package com.digitaldad.websocket;
 
-import com.digitaldad.ai.service.SpeechTranscriptionQuotaService;
-import com.digitaldad.ai.service.SpeechRecognitionService;
-import com.digitaldad.config.service.ConfigService;
+import com.digitaldad.service.SpeechTranscriptionQuotaService;
+import com.digitaldad.service.SpeechRecognitionService;
+import com.digitaldad.service.ConfigService;
 import java.util.Set;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -71,12 +71,14 @@ public class SpeechRecognitionWebSocketHandler extends AbstractWebSocketHandler 
         }
 
         received.addAndGet(payload.length);
+        log.info("收到前端 Binary: {} 字节, 本会话累计: {} 字节", payload.length, received.get());
         conn.sendAudio(payload);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
+        log.info("收到前端 Text: [{}]", payload);
         if ("end".equals(payload) || "stop".equals(payload)) {
             SpeechRecognitionService.VolcAsrConnection conn = getConnection(session);
             if (conn != null) {
@@ -92,7 +94,9 @@ public class SpeechRecognitionWebSocketHandler extends AbstractWebSocketHandler 
         if (conn != null) {
             conn.close();
         }
-        log.info("语音识别 WebSocket 已关闭，session={}", session.getId());
+        AtomicLong received = (AtomicLong) session.getAttributes().get(ATTR_BYTES_RECEIVED);
+        long totalReceived = received != null ? received.get() : 0;
+        log.info("语音识别 WebSocket 已关闭，session={}, 本会话累计收到前端 {} 字节", session.getId(), totalReceived);
     }
 
     @Override
@@ -135,6 +139,7 @@ public class SpeechRecognitionWebSocketHandler extends AbstractWebSocketHandler 
         try {
             if (session.isOpen()) {
                 String json = objectMapper.writeValueAsString(Map.of("type", "transcript", "text", transcript));
+                log.info("推送给前端: {}", json);
                 session.sendMessage(new TextMessage(json));
             }
         } catch (Exception e) {

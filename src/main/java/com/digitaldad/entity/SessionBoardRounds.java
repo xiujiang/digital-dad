@@ -1,4 +1,4 @@
-package com.digitaldad.project.entity;
+package com.digitaldad.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

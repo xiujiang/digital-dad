@@ -226,7 +226,6 @@
   "code": 200,
   "message": "success",
   "data": {
-    "participantId": 1,
     "projectId": 1,
     "role": "GROOM"
   }
@@ -236,7 +235,6 @@
 
 | 字段            | 类型     | 说明             |
 | ------------- | ------ | -------------- |
-| participantId | long   | 参与者 ID，用于创建会话等 |
 | projectId     | long   | 项目 ID          |
 | role          | string | 已绑定角色          |
 
@@ -253,14 +251,14 @@
 
 ```json
 {
-  "participantId": 1
+  "projectId": 3
 }
 ```
 
 
-| 字段            | 类型   | 必填  | 说明             |
-| ------------- | ---- | --- | -------------- |
-| participantId | long | 是   | 参与者 ID（来自绑定接口） |
+| 字段       | 类型   | 必填  | 说明                                   |
+| ---------- | ------ | ----- | -------------------------------------- |
+| projectId  | long   | 是    | 项目 ID，后端根据当前用户+项目确定参与者 |
 
 
 **响应**：`Result<SessionResponse>`
@@ -272,7 +270,6 @@
   "data": {
     "id": 1,
     "projectId": 1,
-    "participantId": 1,
     "currentProjectBoardId": 1,
     "boardCode": "FAMILY_ORIGIN",
     "boardName": "原生家庭",
@@ -301,7 +298,6 @@
 | --------------------- | ------- | --------------------------------------------------------------- |
 | id                    | long    | 会话 ID                                                           |
 | projectId             | long    | 项目 ID                                                           |
-| participantId         | long    | 参与者 ID                                                          |
 | currentProjectBoardId | long    | 当前板块 ID                                                         |
 | boardCode             | string  | 当前板块编码                                                          |
 | boardName             | string  | 当前板块名称                                                          |
@@ -962,7 +958,6 @@
   "data": {
     "id": 1,
     "projectId": 1,
-    "participantId": null,
     "contentType": "OPENING_SPEECH",
     "contentTypeName": "婚礼开场白",
     "versionNo": 1,
@@ -977,10 +972,9 @@
 ```
 
 
-| 字段            | 说明                                |
-| ------------- | --------------------------------- |
-| participantId | 开场白为 null；誓言为对应参与者 ID             |
-| status        | DRAFT / ACTIVE / OUTDATED（素材有更新时） |
+| 字段   | 说明                                |
+| ------ | ----------------------------------- |
+| status | DRAFT / ACTIVE / OUTDATED（素材有更新时） |
 
 
 ---

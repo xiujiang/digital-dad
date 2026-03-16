@@ -1,6 +1,6 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.UserRole;
+import com.digitaldad.entity.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

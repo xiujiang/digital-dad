@@ -1,14 +1,14 @@
-package com.digitaldad.user.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.user.dto.QuotaFlowResponse;
-import com.digitaldad.user.entity.QuotaFlow;
-import com.digitaldad.user.entity.UserQuota;
-import com.digitaldad.user.enums.FlowType;
-import com.digitaldad.user.enums.QuotaType;
-import com.digitaldad.user.enums.RefType;
-import com.digitaldad.user.repository.QuotaFlowRepository;
-import com.digitaldad.user.repository.UserQuotaRepository;
+import com.digitaldad.dto.QuotaFlowResponse;
+import com.digitaldad.entity.QuotaFlow;
+import com.digitaldad.entity.UserQuota;
+import com.digitaldad.enums.FlowType;
+import com.digitaldad.enums.QuotaType;
+import com.digitaldad.enums.RefType;
+import com.digitaldad.repository.QuotaFlowRepository;
+import com.digitaldad.repository.UserQuotaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

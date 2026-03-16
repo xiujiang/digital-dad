@@ -1,14 +1,14 @@
-package com.digitaldad.prompt.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.prompt.dto.PromptContentDto;
-import com.digitaldad.prompt.entity.Prompt;
-import com.digitaldad.prompt.entity.PromptSceneItem;
-import com.digitaldad.prompt.enums.PromptRoleType;
-import com.digitaldad.prompt.enums.PromptStatus;
-import com.digitaldad.prompt.repository.PromptRepository;
-import com.digitaldad.prompt.repository.PromptSceneItemRepository;
-import com.digitaldad.prompt.repository.PromptSceneRepository;
+import com.digitaldad.dto.PromptContentDto;
+import com.digitaldad.entity.Prompt;
+import com.digitaldad.entity.PromptSceneItem;
+import com.digitaldad.enums.PromptRoleType;
+import com.digitaldad.enums.PromptStatus;
+import com.digitaldad.repository.PromptRepository;
+import com.digitaldad.repository.PromptSceneItemRepository;
+import com.digitaldad.repository.PromptSceneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -103,7 +103,9 @@ public class PromptSupplyService {
     }
 
     /**
-     * 获取小结场景提示词（通用或按板块）
+     * 获取小结场景提示词（通用或按板块）。
+     * 小结只发「小结提示词」、不发访谈角色/如何问答，避免模型输出叙述而非 JSON。
+     * 仅保留 code=BOARD_SUMMARY_COMMON_PROMPT 的提示词。
      */
     public List<PromptContentDto> getSummaryPrompts(String boardCode) {
         String sceneCode = boardCode != null && !boardCode.isBlank()
@@ -111,6 +113,21 @@ public class PromptSupplyService {
                 : "BOARD_SUMMARY_COMMON";
         if (sceneRepository.findByCode(sceneCode).isEmpty()) {
             sceneCode = "BOARD_SUMMARY_COMMON";
+        }
+        return getPromptsBySceneCode(sceneCode).stream()
+                .filter(p -> "BOARD_SUMMARY_COMMON_PROMPT".equals(p.getPromptCode()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取故事生成场景提示词（通用或按板块）
+     */
+    public List<PromptContentDto> getStoryPrompts(String boardCode) {
+        String sceneCode = boardCode != null && !boardCode.isBlank()
+                ? "BOARD_STORY_" + boardCode
+                : "BOARD_STORY_COMMON";
+        if (sceneRepository.findByCode(sceneCode).isEmpty()) {
+            sceneCode = "BOARD_STORY_COMMON";
         }
         return getPromptsBySceneCode(sceneCode);
     }

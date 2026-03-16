@@ -1,17 +1,14 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;
 
 /**
- * 绑定参与者响应
+ * 绑定参与者响应（C 端不暴露参与者 ID，仅项目与角色）
  */
 @Data
 @Builder
 public class BindParticipantResponse {
-
-    /** 参与者 ID */
-    private Long participantId;
 
     /** 项目 ID */
     private Long projectId;

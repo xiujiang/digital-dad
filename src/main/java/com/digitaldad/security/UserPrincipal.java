@@ -1,4 +1,4 @@
-package com.digitaldad.user.security;
+package com.digitaldad.security;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -1,4 +1,4 @@
-package com.digitaldad.user.dto;
+package com.digitaldad.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +22,6 @@ public class LoginResponse {
     private List<String> roles;
     private String name;
     private String phone;
+    /** 用户头像 URL（微信登录等场景返回） */
+    private String avatarUrl;
 }

@@ -1,0 +1,13 @@
+{
+  "name": "speech-recognition-ws-client",
+  "version": "1.0.0",
+  "description": "Send an audio file to speech-recognition WebSocket as real-time chunks",
+  "private": true,
+  "scripts": {
+    "send": "node send-audio.js",
+    "test": "node send-audio.js --help"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

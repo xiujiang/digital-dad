@@ -1,7 +1,7 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.UserQuota;
-import com.digitaldad.user.enums.QuotaType;
+import com.digitaldad.entity.UserQuota;
+import com.digitaldad.enums.QuotaType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;

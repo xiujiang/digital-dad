@@ -1,6 +1,6 @@
-package com.digitaldad.project.service.impl;
+package com.digitaldad.service.impl;
 
-import com.digitaldad.project.service.AiChatService;
+import com.digitaldad.service.AiChatService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +28,7 @@ public class StubAiChatService implements AiChatService {
      */
     @Override
     public String generateSummary(String prompt, String conversation, String boardName) {
-        return "{\"title\":\"" + boardName + "小结\",\"key_characters\":[],\"core_points\":[{\"type\":\"事实类\",\"content\":\"[占位]请接入真实AI后重新生成\"}],\"more_details\":[]}";
+        return "{\"title\":\"" + boardName + "小结\",\"key_characters\":[{\"name\":\"示例人物\",\"role_label\":\"亲密关系\"}],\"core_points\":[{\"type\":\"事实类\",\"content\":\"[占位]请接入真实AI后重新生成\"}],\"more_details\":[]}";
     }
 
     /**

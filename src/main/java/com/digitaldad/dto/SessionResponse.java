@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 会话响应
+ * 会话响应（C 端不暴露参与者 ID）
  */
 @Data
 @Builder
@@ -15,7 +15,6 @@ public class SessionResponse {
 
     private Long id;
     private Long projectId;
-    private Long participantId;
     private Long currentProjectBoardId;
     private String boardCode;
     private String boardName;
@@ -31,4 +30,6 @@ public class SessionResponse {
 
     private Integer currentBoardOrder;
     private List<BoardInfoDto> boards;
+    /** 当前用户在项目中的角色（GROOM/BRIDE），用于展示与提示词区分 */
+    private String role;
 }

@@ -1,6 +1,6 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.SessionBoardRounds;
+import com.digitaldad.entity.SessionBoardRounds;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;

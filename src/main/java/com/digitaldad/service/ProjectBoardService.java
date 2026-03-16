@@ -1,12 +1,12 @@
-package com.digitaldad.board.service;
+package com.digitaldad.service;
 
-import com.digitaldad.board.dto.*;
-import com.digitaldad.board.entity.BoardMeta;
-import com.digitaldad.board.entity.ProjectBoard;
-import com.digitaldad.board.repository.BoardMetaRepository;
-import com.digitaldad.board.repository.ProjectBoardRepository;
+import com.digitaldad.dto.*;
+import com.digitaldad.entity.BoardMeta;
+import com.digitaldad.entity.ProjectBoard;
+import com.digitaldad.repository.BoardMetaRepository;
+import com.digitaldad.repository.ProjectBoardRepository;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.project.repository.ProjectRepository;
+import com.digitaldad.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static java.util.Arrays.asList;
 
 /**
  * 项目板块服务
@@ -45,6 +47,29 @@ public class ProjectBoardService {
         return list.stream()
                 .map(pb -> toResponse(pb, metaMap.get(pb.getBoardMetaId())))
                 .collect(Collectors.toList());
+    }
+
+    /** 默认挂载的板块 code（与迁移 V18/V20 一致） */
+    private static final List<String> DEFAULT_BOARD_CODES = asList("FAMILY_ORIGIN", "GROWTH", "LOVE_STORY", "FUTURE_PROMISE");
+
+    /**
+     * 为新项目挂载默认板块（创建项目后调用，幂等：已有则跳过）
+     */
+    @Transactional
+    public void ensureDefaultBoardsForNewProject(Long projectId) {
+        if (projectRepository.findByIdAndDeletedAtIsNull(projectId).isEmpty()) {
+            return;
+        }
+        List<BoardMeta> metas = boardMetaRepository.findByCodeInOrderByDisplayOrderAsc(DEFAULT_BOARD_CODES);
+        for (BoardMeta meta : metas) {
+            if (!projectBoardRepository.existsByProjectIdAndBoardMetaId(projectId, meta.getId())) {
+                ProjectBoard pb = new ProjectBoard();
+                pb.setProjectId(projectId);
+                pb.setBoardMetaId(meta.getId());
+                pb.setDisplayOrder(meta.getDisplayOrder() != null ? meta.getDisplayOrder() : 0);
+                projectBoardRepository.save(pb);
+            }
+        }
     }
 
     /**

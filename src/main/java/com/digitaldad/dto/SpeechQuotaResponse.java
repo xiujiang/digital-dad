@@ -1,4 +1,4 @@
-package com.digitaldad.ai.dto;
+package com.digitaldad.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

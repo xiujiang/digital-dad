@@ -1,6 +1,6 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.BoardSummary;
+import com.digitaldad.entity.BoardSummary;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -17,4 +17,7 @@ public interface BoardSummaryRepository extends JpaRepository<BoardSummary, Long
             Long participantId, Long projectBoardId);
 
     List<BoardSummary> findByParticipantIdOrderByProjectBoardIdAsc(Long participantId);
+
+    /** 某参与者在某项目下的所有小结（用于 my-status 按板块标记是否已生成小结） */
+    List<BoardSummary> findByParticipantIdAndProjectId(Long participantId, Long projectId);
 }

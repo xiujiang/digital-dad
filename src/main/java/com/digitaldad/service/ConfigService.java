@@ -1,13 +1,15 @@
-package com.digitaldad.config.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.config.dto.MemberPackageConfigDto;
+import com.digitaldad.dto.MemberPackageConfigDto;
 import com.digitaldad.config.dto.PasswordPolicyConfigDto;
-import com.digitaldad.config.entity.SysConfig;
-import com.digitaldad.config.repository.SysConfigRepository;
+import com.digitaldad.entity.SysConfig;
+import com.digitaldad.repository.SysConfigRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,6 +26,30 @@ public class ConfigService {
     public static final String KEY_PASSWORD_POLICY = "security.password_policy";
 
     private final SysConfigRepository sysConfigRepository;
+
+    /**
+     * 查询全部配置项（sys_config 表）
+     */
+    public List<SysConfig> listAllConfigs() {
+        return sysConfigRepository.findAll();
+    }
+
+    /**
+     * 按 configKey 修改配置值（仅更新已存在的 key，不存在则抛异常）
+     *
+     * @param configKey   配置键
+     * @param configValue 新的配置值（JSON 对象，可含 name 等字段）
+     */
+    @Transactional
+    public SysConfig updateConfig(String configKey, Map<String, Object> configValue) {
+        if (configValue == null || configValue.isEmpty()) {
+            throw new BusinessException(400, "配置值不能为空");
+        }
+        SysConfig config = sysConfigRepository.findByConfigKey(configKey)
+                .orElseThrow(() -> new BusinessException(404, "配置不存在: " + configKey));
+        config.setConfigValue(configValue);
+        return sysConfigRepository.save(config);
+    }
 
     /**
      * 根据 key 获取配置（JSON 转为 Map）
@@ -105,9 +131,22 @@ public class ConfigService {
     }
 
     /**
-     * 获取板块聊天轮数上限，默认 10 轮
+     * 获取板块聊天轮数上限，默认 10 轮。
+     * <p>测试时可优先使用 JVM 参数 {@code -Dinterview.max_rounds_per_board=2} 或环境变量 {@code INTERVIEW_MAX_ROUNDS_PER_BOARD=2} 覆盖。</p>
      */
     public int getInterviewMaxRoundsPerBoard() {
+        String override = System.getProperty("interview.max_rounds_per_board");
+        if (override == null || override.isBlank()) {
+            override = System.getenv("INTERVIEW_MAX_ROUNDS_PER_BOARD");
+        }
+        if (override != null && !override.isBlank()) {
+            try {
+                int v = Integer.parseInt(override.trim());
+                if (v > 0) return v;
+            } catch (NumberFormatException ignored) {
+                // 忽略无效值，回退 DB
+            }
+        }
         try {
             Map<String, Object> config = getConfigAsMap(KEY_INTERVIEW);
             Integer v = getIntOrNull(config, "max_rounds_per_board");

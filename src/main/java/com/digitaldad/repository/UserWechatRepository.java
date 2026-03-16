@@ -1,6 +1,6 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.UserWechat;
+import com.digitaldad.entity.UserWechat;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

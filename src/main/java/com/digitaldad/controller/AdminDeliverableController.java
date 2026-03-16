@@ -1,8 +1,8 @@
-package com.digitaldad.project.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.project.dto.AdminDeliverableListItemResponse;
-import com.digitaldad.project.service.DeliverableService;
+import com.digitaldad.dto.AdminDeliverableListItemResponse;
+import com.digitaldad.service.DeliverableService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;

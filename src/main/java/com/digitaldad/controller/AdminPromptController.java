@@ -1,8 +1,8 @@
-package com.digitaldad.prompt.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.prompt.dto.*;
-import com.digitaldad.prompt.service.PromptService;
+import com.digitaldad.dto.*;
+import com.digitaldad.service.PromptService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

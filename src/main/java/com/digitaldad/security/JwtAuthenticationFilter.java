@@ -1,6 +1,6 @@
-package com.digitaldad.user.security;
+package com.digitaldad.security;
 
-import com.digitaldad.user.util.JwtUtils;
+import com.digitaldad.util.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

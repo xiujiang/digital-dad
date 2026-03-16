@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -25,4 +25,8 @@ public class CreateProjectRequest {
     /** 婚礼主题（如：婚礼故事采访、浪漫秋日婚礼等） */
     @Size(max = 200)
     private String theme;
+
+    /** 联系方式（与项目绑定，如手机号、微信等） */
+    @Size(max = 100)
+    private String contactInfo;
 }

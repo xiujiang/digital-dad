@@ -1,10 +1,10 @@
-package com.digitaldad.project.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.project.dto.DeliverableDetailResponse;
-import com.digitaldad.project.dto.UpdateDeliverableRequest;
-import com.digitaldad.project.service.DeliverableService;
-import com.digitaldad.user.security.UserPrincipal;
+import com.digitaldad.dto.DeliverableDetailResponse;
+import com.digitaldad.dto.UpdateDeliverableRequest;
+import com.digitaldad.service.DeliverableService;
+import com.digitaldad.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

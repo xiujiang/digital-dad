@@ -1,29 +1,29 @@
-package com.digitaldad.project.service;
+package com.digitaldad.service;
 
-import com.digitaldad.board.entity.ProjectBoard;
-import com.digitaldad.board.repository.ProjectBoardRepository;
+import com.digitaldad.entity.ProjectBoard;
+import com.digitaldad.repository.ProjectBoardRepository;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.project.dto.DeliverableDetailResponse;
-import com.digitaldad.project.dto.GenerateDeliverableRequest;
-import com.digitaldad.project.dto.UpdateDeliverableRequest;
-import com.digitaldad.project.entity.GeneratedContent;
-import com.digitaldad.project.entity.MaterialSnapshot;
-import com.digitaldad.project.entity.Project;
-import com.digitaldad.project.entity.ProjectParticipant;
-import com.digitaldad.project.enums.ContentStatus;
-import com.digitaldad.project.enums.ContentType;
-import com.digitaldad.project.enums.ParticipantRole;
-import com.digitaldad.project.repository.GeneratedContentRepository;
-import com.digitaldad.project.repository.MaterialSnapshotRepository;
-import com.digitaldad.project.repository.ProjectParticipantRepository;
-import com.digitaldad.project.repository.ProjectRepository;
-import com.digitaldad.project.dto.AdminDeliverableListItemResponse;
-import com.digitaldad.prompt.dto.PromptContentDto;
-import com.digitaldad.prompt.service.PromptSupplyService;
-import com.digitaldad.user.entity.User;
-import com.digitaldad.user.entity.User;
-import com.digitaldad.user.repository.UserRepository;
-import com.digitaldad.user.security.UserPrincipal;
+import com.digitaldad.dto.DeliverableDetailResponse;
+import com.digitaldad.dto.GenerateDeliverableRequest;
+import com.digitaldad.dto.UpdateDeliverableRequest;
+import com.digitaldad.entity.GeneratedContent;
+import com.digitaldad.entity.MaterialSnapshot;
+import com.digitaldad.entity.Project;
+import com.digitaldad.entity.ProjectParticipant;
+import com.digitaldad.enums.ContentStatus;
+import com.digitaldad.enums.ContentType;
+import com.digitaldad.enums.ParticipantRole;
+import com.digitaldad.repository.GeneratedContentRepository;
+import com.digitaldad.repository.MaterialSnapshotRepository;
+import com.digitaldad.repository.ProjectParticipantRepository;
+import com.digitaldad.repository.ProjectRepository;
+import com.digitaldad.dto.AdminDeliverableListItemResponse;
+import com.digitaldad.dto.PromptContentDto;
+import com.digitaldad.service.PromptSupplyService;
+import com.digitaldad.entity.User;
+import com.digitaldad.entity.User;
+import com.digitaldad.repository.UserRepository;
+import com.digitaldad.security.UserPrincipal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -293,6 +293,19 @@ public class DeliverableService {
     }
 
     private DeliverableDetailResponse toResponse(GeneratedContent c) {
-        return DeliverableDetailResponse.builder().id(c.getId()).projectId(c.getProjectId()).participantId(c.getParticipantId()).contentType(c.getContentType().name()).contentTypeName(CONTENT_TYPE_NAMES.get(c.getContentType())).versionNo(c.getVersionNo()).title(c.getTitle()).content(c.getContent()).status(c.getStatus().name()).snapshotVersionAt(c.getSnapshotVersionAt()).createdAt(c.getCreatedAt()).updatedAt(c.getUpdatedAt()).build();
+        return DeliverableDetailResponse.builder()
+                .id(c.getId())
+                .projectId(c.getProjectId())
+                .contentType(c.getContentType().name())
+                .contentTypeName(CONTENT_TYPE_NAMES.get(c.getContentType()))
+                .versionNo(c.getVersionNo())
+                .title(c.getTitle())
+                .content(c.getContent())
+                .status(c.getStatus().name())
+                .usingLatestSnapshot(ContentStatus.ACTIVE.equals(c.getStatus()))
+                .snapshotVersionAt(c.getSnapshotVersionAt())
+                .createdAt(c.getCreatedAt())
+                .updatedAt(c.getUpdatedAt())
+                .build();
     }
 }

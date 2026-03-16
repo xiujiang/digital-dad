@@ -1,4 +1,4 @@
-package com.digitaldad.prompt.enums;
+package com.digitaldad.enums;
 
 /**
  * 提示词使用方式（组合时）

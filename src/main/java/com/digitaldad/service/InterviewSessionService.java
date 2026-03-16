@@ -1,27 +1,27 @@
-package com.digitaldad.project.service;
+package com.digitaldad.service;
 
-import com.digitaldad.board.entity.BoardMeta;
-import com.digitaldad.board.entity.ProjectBoard;
-import com.digitaldad.board.repository.BoardMetaRepository;
-import com.digitaldad.board.repository.ProjectBoardRepository;
+import com.digitaldad.entity.BoardMeta;
+import com.digitaldad.entity.ProjectBoard;
+import com.digitaldad.repository.BoardMetaRepository;
+import com.digitaldad.repository.ProjectBoardRepository;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.config.service.ConfigService;
-import com.digitaldad.ai.dto.ChatMessage;
-import com.digitaldad.project.dto.*;
-import com.digitaldad.project.entity.ConversationMessage;
-import com.digitaldad.project.entity.InterviewSession;
-import com.digitaldad.project.entity.ProjectParticipant;
-import com.digitaldad.project.entity.SessionBoardRounds;
-import com.digitaldad.project.enums.MessageType;
-import com.digitaldad.project.enums.SenderType;
-import com.digitaldad.project.enums.SessionStatus;
-import com.digitaldad.project.repository.ConversationMessageRepository;
-import com.digitaldad.project.repository.InterviewSessionRepository;
-import com.digitaldad.project.repository.ProjectParticipantRepository;
-import com.digitaldad.project.repository.SessionBoardRoundsRepository;
-import com.digitaldad.prompt.dto.PromptContentDto;
-import com.digitaldad.prompt.enums.PromptRoleType;
-import com.digitaldad.prompt.service.PromptSupplyService;
+import com.digitaldad.service.ConfigService;
+import com.digitaldad.dto.ChatMessage;
+import com.digitaldad.dto.*;
+import com.digitaldad.entity.ConversationMessage;
+import com.digitaldad.entity.InterviewSession;
+import com.digitaldad.entity.ProjectParticipant;
+import com.digitaldad.entity.SessionBoardRounds;
+import com.digitaldad.enums.MessageType;
+import com.digitaldad.enums.SenderType;
+import com.digitaldad.enums.SessionStatus;
+import com.digitaldad.repository.ConversationMessageRepository;
+import com.digitaldad.repository.InterviewSessionRepository;
+import com.digitaldad.repository.ProjectParticipantRepository;
+import com.digitaldad.repository.SessionBoardRoundsRepository;
+import com.digitaldad.dto.PromptContentDto;
+import com.digitaldad.enums.PromptRoleType;
+import com.digitaldad.service.PromptSupplyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,13 +50,6 @@ public class InterviewSessionService {
     private final AiChatService aiChatService;
     private final ConfigService configService;
 
-    private ProjectParticipant checkParticipantAccess(Long participantId, Long userId) {
-        ProjectParticipant p = participantRepository.findById(participantId)
-                .orElseThrow(() -> new BusinessException(404, "参与者不存在"));
-        if (!p.getUserId().equals(userId)) throw new BusinessException(403, "无权限操作该参与者");
-        return p;
-    }
-
     private InterviewSession checkSessionAccess(Long sessionId, Long userId) {
         InterviewSession s = sessionRepository.findById(sessionId).orElseThrow(() -> new BusinessException(404, "会话不存在"));
         ProjectParticipant p = participantRepository.findById(s.getParticipantId()).orElseThrow(() -> new BusinessException(404, "参与者不存在"));
@@ -65,33 +58,84 @@ public class InterviewSessionService {
     }
 
     /**
-     * 创建或恢复会话（若有进行中的会话则返回该会话）
+     * 创建或恢复「该参与者在该板块下」的会话；若已有进行中的则直接返回。
+     * <p>session = 用户 + 板块，换板块会产生新 session。</p>
      *
-     * @param participantId 参与者 ID
-     * @param userId        当前用户 ID
+     * @param projectId     项目 ID
+     * @param projectBoardId 板块 ID（必填）
+     * @param userId         当前用户 ID
      * @return 会话信息
      */
     @Transactional
-    public SessionResponse createOrResume(Long participantId, Long userId) {
-        ProjectParticipant participant = checkParticipantAccess(participantId, userId);
-        List<SessionStatus> activeStatuses = List.of(SessionStatus.ACTIVE, SessionStatus.WAITING_CONFIRM, SessionStatus.READY);
-        var existing = sessionRepository.findByParticipantIdAndStatusIn(participantId, activeStatuses);
-        if (existing.isPresent()) return toSessionResponse(existing.get(), participant);
+    public SessionResponse createOrResume(Long projectId, Long projectBoardId, Long userId) {
+        ProjectParticipant participant = participantRepository.findByProjectIdAndUserId(projectId, userId)
+                .orElseThrow(() -> new BusinessException(404, "未绑定该项目，请先选择身份"));
+        Long participantId = participant.getId();
+        if (!participant.getProjectId().equals(projectId)) {
+            throw new BusinessException(400, "板块不属于当前项目");
+        }
+        ProjectBoard board = projectBoardRepository.findById(projectBoardId)
+                .orElseThrow(() -> new BusinessException(404, "板块不存在"));
+        if (!board.getProjectId().equals(projectId)) {
+            throw new BusinessException(400, "板块不属于当前项目");
+        }
 
-        List<ProjectBoard> boards = projectBoardRepository.findByProjectIdOrderByDisplayOrderAsc(participant.getProjectId());
-        if (boards.isEmpty()) throw new BusinessException(400, "项目暂无板块配置");
+        // 唯一约束 uk_participant_board：同一参与者同一板块仅一条会话。先按 (participant, board) 查，有则直接返回，避免 COMPLETED 等状态被漏查导致重复插入
+        var existingAny = sessionRepository.findByParticipantIdAndCurrentProjectBoardId(participantId, projectBoardId);
+        if (existingAny.isPresent()) {
+            InterviewSession s = existingAny.get();
+            s.setLastActiveAt(LocalDateTime.now());
+            sessionRepository.save(s);
+            return toSessionResponse(s, participant);
+        }
 
-        ProjectBoard firstBoard = boards.get(0);
         InterviewSession session = new InterviewSession();
         session.setProjectId(participant.getProjectId());
         session.setParticipantId(participantId);
-        session.setCurrentProjectBoardId(firstBoard.getId());
+        session.setCurrentProjectBoardId(projectBoardId);
         session.setStatus(SessionStatus.ACTIVE);
         session.setRoundCount(0);
         session.setStartedAt(LocalDateTime.now());
         session.setLastActiveAt(LocalDateTime.now());
         session = sessionRepository.save(session);
+
+        SessionBoardRounds sbr = new SessionBoardRounds();
+        sbr.setSessionId(session.getId());
+        sbr.setProjectBoardId(projectBoardId);
+        sbr.setRoundCount(0);
+        sessionBoardRoundsRepository.save(sbr);
+
+        String welcomeContent = buildWelcomeMessage(board);
+        ConversationMessage welcomeMsg = new ConversationMessage();
+        welcomeMsg.setSessionId(session.getId());
+        welcomeMsg.setSenderType(SenderType.AI);
+        welcomeMsg.setMessageType(MessageType.TEXT);
+        welcomeMsg.setContent(welcomeContent);
+        welcomeMsg.setSequenceNo(1);
+        welcomeMsg.setBatchNo(0);
+        welcomeMsg.setIsSubmitted(true);
+        messageRepository.save(welcomeMsg);
+
         return toSessionResponse(session, participant);
+    }
+
+    /**
+     * 构建当前板块的欢迎语（从提示词表 code=BOARD_INTERVIEW_WELCOME 读取模板，替换 {{boardName}}）
+     */
+    private String buildWelcomeMessage(ProjectBoard firstBoard) {
+        BoardMeta meta = firstBoard.getBoardMetaId() != null
+                ? boardMetaRepository.findById(firstBoard.getBoardMetaId()).orElse(null)
+                : null;
+        String boardName = meta != null ? meta.getName() : "当前板块";
+        try {
+            String template = promptSupplyService.getActiveContentByCode("BOARD_INTERVIEW_WELCOME");
+            if (template != null && !template.isBlank()) {
+                return template.replace("{{boardName}}", boardName);
+            }
+        } catch (Exception ignored) {
+            // 提示词未配置或未生效时使用兜底文案
+        }
+        return String.format("我是%s板块，我们来一起聊聊你的%s方面的事情，我们可以开始了。", boardName, boardName);
     }
 
     /**
@@ -108,15 +152,19 @@ public class InterviewSessionService {
     }
 
     /**
-     * 获取会话中的消息列表（按序号排序）
+     * 获取会话中的消息列表（按序号排序）及总轮数
      *
      * @param sessionId 会话 ID
      * @param userId    当前用户 ID
-     * @return 消息列表
+     * @return 消息列表与总轮数
      */
-    public List<MessageResponse> getMessages(Long sessionId, Long userId) {
-        checkSessionAccess(sessionId, userId);
-        return messageRepository.findBySessionIdOrderBySequenceNoAsc(sessionId).stream().map(this::toMessageResponse).collect(Collectors.toList());
+    public MessagesListResponse getMessages(Long sessionId, Long userId) {
+        InterviewSession session = checkSessionAccess(sessionId, userId);
+        List<MessageResponse> messages = messageRepository.findBySessionIdOrderBySequenceNoAsc(sessionId).stream().map(this::toMessageResponse).collect(Collectors.toList());
+        return MessagesListResponse.builder()
+                .messages(messages)
+                .totalRounds(session.getRoundCount() != null ? session.getRoundCount() : 0)
+                .build();
     }
 
     /**
@@ -260,7 +308,105 @@ public class InterviewSessionService {
         sbr.setRoundCount(sbr.getRoundCount() + 1);
         sessionBoardRoundsRepository.save(sbr);
 
-        return SubmitResultResponse.builder().newBatchNo(nextBatch).roundCount(session.getRoundCount()).newMessages(List.of(toMessageResponse(aiMsg))).build();
+        return SubmitResultResponse.builder().newBatchNo(nextBatch).roundCount(session.getRoundCount()).maxRoundsPerBoard(maxRounds).newMessages(List.of(toMessageResponse(aiMsg))).build();
+    }
+
+    /**
+     * 流式提交：先校验并标记消息已提交，返回用于调用 AI 流式的上下文；流式结束后调用 saveAiReplyAfterStream 落库。
+     *
+     * @param sessionId 会话 ID
+     * @param userId    当前用户 ID
+     * @return 含 systemPrompt、history、nextBatch，供 AI 流式调用
+     */
+    @Transactional
+    public PrepareSubmitStreamResult prepareSubmitStream(Long sessionId, Long userId) {
+        InterviewSession session = checkSessionAccess(sessionId, userId);
+        List<ConversationMessage> unsubmitted = messageRepository.findBySessionIdAndIsSubmittedFalse(sessionId);
+        if (unsubmitted.isEmpty()) throw new BusinessException(400, "暂无待提交的消息");
+
+        Long boardId = session.getCurrentProjectBoardId();
+        if (boardId == null) throw new BusinessException(400, "当前未选定板块，无法提交");
+
+        int maxRounds = configService.getInterviewMaxRoundsPerBoard();
+        SessionBoardRounds sbr = sessionBoardRoundsRepository.findBySessionIdAndProjectBoardId(sessionId, boardId)
+                .orElseGet(() -> {
+                    SessionBoardRounds newSbr = new SessionBoardRounds();
+                    newSbr.setSessionId(sessionId);
+                    newSbr.setProjectBoardId(boardId);
+                    newSbr.setRoundCount(0);
+                    return sessionBoardRoundsRepository.save(newSbr);
+                });
+        if (sbr.getRoundCount() >= maxRounds) {
+            throw new BusinessException(400, "该板块聊天轮数已达上限（" + maxRounds + " 轮），请前往下一板块");
+        }
+
+        int nextBatch = messageRepository.findBySessionIdOrderBySequenceNoAsc(sessionId).stream().mapToInt(ConversationMessage::getBatchNo).max().orElse(0) + 1;
+        for (ConversationMessage m : unsubmitted) {
+            m.setBatchNo(nextBatch);
+            m.setIsSubmitted(true);
+            messageRepository.save(m);
+        }
+
+        ProjectParticipant participant = participantRepository.findById(session.getParticipantId()).orElseThrow();
+        ProjectBoard projectBoard = session.getCurrentProjectBoardId() != null ? projectBoardRepository.findById(session.getCurrentProjectBoardId()).orElse(null) : null;
+        String boardCode = projectBoard != null ? boardMetaRepository.findById(projectBoard.getBoardMetaId()).map(BoardMeta::getCode).orElse("COMMON") : "COMMON";
+        PromptRoleType role = participant.getRoleType() != null ? PromptRoleType.valueOf(participant.getRoleType().name()) : PromptRoleType.COMMON;
+
+        String systemPrompt = "";
+        try {
+            List<PromptContentDto> prompts = promptSupplyService.getInterviewPrompts(boardCode, role);
+            systemPrompt = prompts.stream().map(PromptContentDto::getContent).collect(Collectors.joining("\n\n"));
+        } catch (Exception e) {
+            systemPrompt = "你是数字爸爸的采访助手，温和、共情，引导用户分享故事。";
+        }
+
+        List<ChatMessage> history = messageRepository.findBySessionIdOrderBySequenceNoAsc(sessionId).stream()
+                .filter(m -> m.getContent() != null && !m.getContent().isBlank())
+                .map(m -> "USER".equals(m.getSenderType().name()) ? ChatMessage.user(m.getContent()) : ChatMessage.assistant(m.getContent()))
+                .collect(Collectors.toList());
+
+        return PrepareSubmitStreamResult.builder()
+                .systemPrompt(systemPrompt)
+                .history(history)
+                .nextBatch(nextBatch)
+                .build();
+    }
+
+    /**
+     * 流式提交结束后，将 AI 完整回复落库并更新轮数
+     *
+     * @param sessionId  会话 ID
+     * @param userId     当前用户 ID
+     * @param fullContent AI 完整回复内容
+     * @param nextBatch  本批 batchNo（与 prepareSubmitStream 返回一致）
+     * @return 落库后的消息 ID 与当前轮数
+     */
+    @Transactional
+    public SaveAiReplyResult saveAiReplyAfterStream(Long sessionId, Long userId, String fullContent, int nextBatch) {
+        InterviewSession session = checkSessionAccess(sessionId, userId);
+        Long boardId = session.getCurrentProjectBoardId();
+        if (boardId == null) throw new BusinessException(400, "当前未选定板块");
+
+        int maxSeq = messageRepository.findBySessionIdOrderBySequenceNoAsc(sessionId).stream().mapToInt(ConversationMessage::getSequenceNo).max().orElse(0);
+        ConversationMessage aiMsg = new ConversationMessage();
+        aiMsg.setSessionId(sessionId);
+        aiMsg.setSenderType(SenderType.AI);
+        aiMsg.setMessageType(MessageType.TEXT);
+        aiMsg.setContent(fullContent != null ? fullContent : "");
+        aiMsg.setSequenceNo(maxSeq + 1);
+        aiMsg.setBatchNo(nextBatch);
+        aiMsg.setIsSubmitted(true);
+        aiMsg = messageRepository.save(aiMsg);
+
+        session.setRoundCount(session.getRoundCount() + 1);
+        session.setLastActiveAt(LocalDateTime.now());
+        sessionRepository.save(session);
+
+        SessionBoardRounds sbr = sessionBoardRoundsRepository.findBySessionIdAndProjectBoardId(sessionId, boardId).orElseThrow();
+        sbr.setRoundCount(sbr.getRoundCount() + 1);
+        sessionBoardRoundsRepository.save(sbr);
+
+        return SaveAiReplyResult.builder().messageId(aiMsg.getId()).roundCount(session.getRoundCount()).build();
     }
 
     private SessionResponse toSessionResponse(InterviewSession s, ProjectParticipant p) {
@@ -290,7 +436,7 @@ public class InterviewSessionService {
             currentBoardRounds = sessionBoardRoundsRepository.findBySessionIdAndProjectBoardId(s.getId(), s.getCurrentProjectBoardId())
                     .map(SessionBoardRounds::getRoundCount).orElse(0);
         }
-        return SessionResponse.builder().id(s.getId()).projectId(s.getProjectId()).participantId(s.getParticipantId()).currentProjectBoardId(s.getCurrentProjectBoardId()).boardCode(boardCode).boardName(boardName).status(s.getStatus().name()).roundCount(s.getRoundCount()).currentBoardRoundCount(currentBoardRounds).maxRoundsPerBoard(maxRounds).startedAt(s.getStartedAt()).lastActiveAt(s.getLastActiveAt()).createdAt(s.getCreatedAt()).currentBoardOrder(currentOrder).boards(boardInfos).build();
+        return SessionResponse.builder().id(s.getId()).projectId(s.getProjectId()).currentProjectBoardId(s.getCurrentProjectBoardId()).boardCode(boardCode).boardName(boardName).status(s.getStatus().name()).roundCount(s.getRoundCount()).currentBoardRoundCount(currentBoardRounds).maxRoundsPerBoard(maxRounds).startedAt(s.getStartedAt()).lastActiveAt(s.getLastActiveAt()).createdAt(s.getCreatedAt()).currentBoardOrder(currentOrder).boards(boardInfos).role(p.getRoleType() != null ? p.getRoleType().name() : null).build();
     }
 
     private MessageResponse toMessageResponse(ConversationMessage m) {

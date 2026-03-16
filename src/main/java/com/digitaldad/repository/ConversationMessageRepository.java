@@ -1,6 +1,6 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.ConversationMessage;
+import com.digitaldad.entity.ConversationMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

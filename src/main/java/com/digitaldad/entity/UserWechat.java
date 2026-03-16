@@ -1,4 +1,4 @@
-package com.digitaldad.user.entity;
+package com.digitaldad.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -48,6 +48,10 @@ public class UserWechat {
 
     @Column(name = "city", length = 50)
     private String city;
+
+    /** 微信 jscode2session 返回，用于解密手机号等 */
+    @Column(name = "session_key", length = 128)
+    private String sessionKey;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

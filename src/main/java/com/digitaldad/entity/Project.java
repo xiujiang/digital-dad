@@ -1,6 +1,6 @@
-package com.digitaldad.project.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.project.enums.ProjectStatus;
+import com.digitaldad.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,6 +42,10 @@ public class Project {
 
     @Column(name = "theme", length = 200)
     private String theme;
+
+    /** 联系方式（与项目绑定） */
+    @Column(name = "contact_info", length = 100)
+    private String contactInfo;
 
     @Column(name = "share_token", nullable = false, unique = true, length = 64)
     private String shareToken;

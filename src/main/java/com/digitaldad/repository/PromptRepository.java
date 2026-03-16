@@ -1,8 +1,8 @@
-package com.digitaldad.prompt.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.prompt.entity.Prompt;
-import com.digitaldad.prompt.enums.PromptContentType;
-import com.digitaldad.prompt.enums.PromptStatus;
+import com.digitaldad.entity.Prompt;
+import com.digitaldad.enums.PromptContentType;
+import com.digitaldad.enums.PromptStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

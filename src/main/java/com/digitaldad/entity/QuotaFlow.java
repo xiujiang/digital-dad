@@ -1,7 +1,7 @@
-package com.digitaldad.user.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.user.enums.FlowType;
-import com.digitaldad.user.enums.QuotaType;
+import com.digitaldad.enums.FlowType;
+import com.digitaldad.enums.QuotaType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,7 +25,7 @@ public class QuotaFlow {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "quota_type", nullable = false, length = 20)
+    @Column(name = "quota_type", nullable = false, length = 32)
     private QuotaType quotaType;
 
     @Enumerated(EnumType.STRING)

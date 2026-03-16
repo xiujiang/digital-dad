@@ -1,6 +1,6 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
-import com.digitaldad.project.enums.ContentType;
+import com.digitaldad.enums.ContentType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

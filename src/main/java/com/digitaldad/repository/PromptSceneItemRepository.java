@@ -1,6 +1,6 @@
-package com.digitaldad.prompt.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.prompt.entity.PromptSceneItem;
+import com.digitaldad.entity.PromptSceneItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

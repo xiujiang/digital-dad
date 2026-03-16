@@ -1,4 +1,4 @@
-package com.digitaldad.prompt.dto;
+package com.digitaldad.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

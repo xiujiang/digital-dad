@@ -1,6 +1,6 @@
-package com.digitaldad.user.dto;
+package com.digitaldad.dto;
 
-import com.digitaldad.user.enums.ContactVisible;
+import com.digitaldad.enums.ContactVisible;
 import lombok.Builder;
 import lombok.Data;
 

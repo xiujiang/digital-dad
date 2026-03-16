@@ -1,8 +1,8 @@
-package com.digitaldad.user.controller;
+package com.digitaldad.controller;
 
-import com.digitaldad.ai.service.SpeechTranscriptionQuotaService;
+import com.digitaldad.service.SpeechTranscriptionQuotaService;
 import com.digitaldad.common.result.Result;
-import com.digitaldad.user.security.UserPrincipal;
+import com.digitaldad.security.UserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

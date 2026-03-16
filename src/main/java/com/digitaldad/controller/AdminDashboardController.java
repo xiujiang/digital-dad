@@ -1,8 +1,8 @@
 package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.project.dto.DashboardOverviewResponse;
-import com.digitaldad.project.service.AdminDashboardService;
+import com.digitaldad.dto.DashboardOverviewResponse;
+import com.digitaldad.service.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

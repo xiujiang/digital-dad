@@ -1,15 +1,15 @@
-package com.digitaldad.prompt.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.prompt.dto.*;
-import com.digitaldad.prompt.entity.Prompt;
-import com.digitaldad.prompt.entity.PromptScene;
-import com.digitaldad.prompt.entity.PromptSceneItem;
-import com.digitaldad.prompt.enums.PromptRoleType;
-import com.digitaldad.prompt.enums.PromptSceneScope;
-import com.digitaldad.prompt.enums.PromptStatus;
-import com.digitaldad.prompt.enums.PromptUsageMode;
-import com.digitaldad.prompt.repository.*;
+import com.digitaldad.dto.*;
+import com.digitaldad.entity.Prompt;
+import com.digitaldad.entity.PromptScene;
+import com.digitaldad.entity.PromptSceneItem;
+import com.digitaldad.enums.PromptRoleType;
+import com.digitaldad.enums.PromptSceneScope;
+import com.digitaldad.enums.PromptStatus;
+import com.digitaldad.enums.PromptUsageMode;
+import com.digitaldad.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +29,7 @@ public class PromptSceneService {
     private final PromptSceneRepository sceneRepository;
     private final PromptSceneItemRepository sceneItemRepository;
     private final PromptRepository promptRepository;
+    private final PromptService promptService;
 
     /**
      * 列出场景（支持按 scope、boardCode、roleType、status 筛选）
@@ -60,6 +61,40 @@ public class PromptSceneService {
         PromptScene s = sceneRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "场景不存在"));
         return toResponseWithItems(s);
+    }
+
+    /**
+     * 创建场景并同时创建并绑定一条提示词（首版）
+     * <p>顺序：创建场景 → 创建提示词（首版）→ 添加场景项。</p>
+     */
+    @Transactional
+    public PromptSceneResponse createWithFirstPrompt(CreateSceneWithFirstPromptRequest request) {
+        CreatePromptSceneRequest sceneReq = new CreatePromptSceneRequest();
+        sceneReq.setCode(request.getCode());
+        sceneReq.setName(request.getName());
+        sceneReq.setScope(request.getScope());
+        sceneReq.setBoardCode(request.getBoardCode());
+        sceneReq.setRoleType(request.getRoleType());
+        sceneReq.setDescription(request.getDescription());
+        sceneReq.setStatus(request.getStatus());
+        PromptSceneResponse scene = create(sceneReq);
+
+        CreatePromptRequest promptReq = new CreatePromptRequest();
+        promptReq.setCode(request.getFirstPromptCode());
+        promptReq.setName(request.getFirstPromptName());
+        promptReq.setContent(request.getFirstPromptContent());
+        promptReq.setContentType(request.getFirstPromptContentType() != null ? request.getFirstPromptContentType() : "TEXT");
+        promptReq.setDescription(request.getFirstPromptDescription());
+        promptReq.setStatus(request.getFirstPromptStatus() != null ? request.getFirstPromptStatus() : "ENABLED");
+        promptService.create(promptReq);
+
+        AddSceneItemRequest itemReq = new AddSceneItemRequest();
+        itemReq.setPromptCode(request.getFirstPromptCode());
+        itemReq.setDisplayOrder(request.getFirstPromptDisplayOrder() != null ? request.getFirstPromptDisplayOrder() : 0);
+        itemReq.setUsageMode(request.getFirstPromptUsageMode() != null ? request.getFirstPromptUsageMode() : "APPEND");
+        addItem(scene.getId(), itemReq);
+
+        return getById(scene.getId());
     }
 
     /**
@@ -114,7 +149,7 @@ public class PromptSceneService {
      */
     @Transactional
     public PromptSceneItemResponse addItem(Long sceneId, AddSceneItemRequest request) {
-        PromptScene scene = sceneRepository.findById(sceneId)
+        sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new BusinessException(404, "场景不存在"));
         if (promptRepository.findByCodeAndIsActiveTrue(request.getPromptCode()).isEmpty()) {
             throw new BusinessException(404, "提示词不存在或未生效: " + request.getPromptCode());

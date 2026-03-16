@@ -28,6 +28,12 @@ public class TencentSmsProperties {
     /** 验证码模板 ID */
     private String templateId = "2609865";
 
+    /**
+     * 模板占位符个数，需与腾讯云审核通过的模板一致。
+     * 1 = 仅验证码 {1}；2 = 验证码 {1} + 有效期分钟数 {2}（常见如「您的验证码是{1}，{2}分钟内有效」）
+     */
+    private int templateParamCount = 2;
+
     /** API 地域，默认 ap-guangzhou */
     private String region = "ap-guangzhou";
 

@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +14,7 @@ public class BoardStoryResponse {
 
     private Long id;
     private Long sessionId;
+    private Long projectId;
     private Long projectBoardId;
     private String boardCode;
     private String boardName;

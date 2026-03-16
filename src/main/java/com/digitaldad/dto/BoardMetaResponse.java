@@ -1,4 +1,4 @@
-package com.digitaldad.board.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;

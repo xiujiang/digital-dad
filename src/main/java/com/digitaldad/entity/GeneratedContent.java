@@ -1,7 +1,7 @@
-package com.digitaldad.project.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.project.enums.ContentStatus;
-import com.digitaldad.project.enums.ContentType;
+import com.digitaldad.enums.ContentStatus;
+import com.digitaldad.enums.ContentType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

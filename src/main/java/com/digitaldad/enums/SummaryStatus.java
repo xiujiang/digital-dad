@@ -1,4 +1,4 @@
-package com.digitaldad.project.enums;
+package com.digitaldad.enums;
 
 /**
  * 板块小结状态

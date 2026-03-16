@@ -1,9 +1,9 @@
-package com.digitaldad.prompt.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.prompt.dto.*;
-import com.digitaldad.prompt.service.PromptService;
-import com.digitaldad.user.security.UserPrincipal;
+import com.digitaldad.dto.*;
+import com.digitaldad.service.PromptService;
+import com.digitaldad.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

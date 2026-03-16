@@ -1,7 +1,7 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.ProjectParticipant;
-import com.digitaldad.project.enums.ParticipantRole;
+import com.digitaldad.entity.ProjectParticipant;
+import com.digitaldad.enums.ParticipantRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -19,6 +19,8 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
     Optional<ProjectParticipant> findByProjectIdAndRoleType(Long projectId, ParticipantRole roleType);
 
     Optional<ProjectParticipant> findByProjectIdAndUserId(Long projectId, Long userId);
+
+    List<ProjectParticipant> findByUserId(Long userId);
 
     boolean existsByProjectIdAndRoleType(Long projectId, ParticipantRole roleType);
 

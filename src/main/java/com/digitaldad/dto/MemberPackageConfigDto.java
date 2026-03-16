@@ -1,4 +1,4 @@
-package com.digitaldad.config.dto;
+package com.digitaldad.dto;
 
 import lombok.Data;
 

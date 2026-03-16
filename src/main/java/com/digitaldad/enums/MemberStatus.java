@@ -1,4 +1,4 @@
-package com.digitaldad.user.enums;
+package com.digitaldad.enums;
 
 /**
  * 会员状态

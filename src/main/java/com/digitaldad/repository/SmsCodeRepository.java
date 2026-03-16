@@ -1,6 +1,6 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.SmsCode;
+import com.digitaldad.entity.SmsCode;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;

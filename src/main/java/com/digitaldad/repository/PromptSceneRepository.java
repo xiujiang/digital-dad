@@ -1,9 +1,9 @@
-package com.digitaldad.prompt.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.prompt.entity.PromptScene;
-import com.digitaldad.prompt.enums.PromptRoleType;
-import com.digitaldad.prompt.enums.PromptSceneScope;
-import com.digitaldad.prompt.enums.PromptStatus;
+import com.digitaldad.entity.PromptScene;
+import com.digitaldad.enums.PromptRoleType;
+import com.digitaldad.enums.PromptSceneScope;
+import com.digitaldad.enums.PromptStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

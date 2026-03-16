@@ -1,13 +1,15 @@
-package com.digitaldad.user.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.user.dto.*;
-import com.digitaldad.user.security.UserPrincipal;
-import com.digitaldad.user.service.AuthService;
+import com.digitaldad.dto.*;
+import com.digitaldad.security.UserPrincipal;
+import com.digitaldad.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 认证接口
@@ -63,14 +65,27 @@ public class AuthController {
     }
 
     /**
-     * 微信小程序登录（小程序将 wx.login() 得到的 code 发到后端，后端用 code 换 openid 并签发 JWT）
+     * 微信小程序登录/注册（前端传 wx.login() 得到的 code；后端用 code 调微信换 openid，查/建用户、写登录流水并返回 Token）
      *
-     * @param request 含 code
-     * @return 登录结果（Token、用户信息），与手机号登录结构一致
+     * @param request 含 code（必填）及可选 nickName、avatarUrl 等
+     * @param httpRequest 用于取 IP、User-Agent 写登录流水
+     * @return 登录结果（Token、用户信息）
      */
     @PostMapping("/wechat-login")
-    public Result<LoginResponse> wechatLogin(@Valid @RequestBody WeChatLoginRequest request) {
-        return Result.ok(authService.wechatLogin(request.getCode()));
+    public Result<LoginResponse> wechatLogin(
+            @Valid @RequestBody WeChatLoginRequest request,
+            HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+        return Result.ok(authService.wechatLogin(request, clientIp, userAgent));
+    }
+
+    private static String getClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     /**

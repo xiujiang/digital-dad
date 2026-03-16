@@ -1,4 +1,4 @@
-package com.digitaldad.user.enums;
+package com.digitaldad.enums;
 
 /**
  * 联系方式展示方式

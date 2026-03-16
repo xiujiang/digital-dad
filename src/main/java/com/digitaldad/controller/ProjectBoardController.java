@@ -1,9 +1,9 @@
-package com.digitaldad.board.controller;
+package com.digitaldad.controller;
 
-import com.digitaldad.board.dto.*;
-import com.digitaldad.board.service.ProjectBoardService;
+import com.digitaldad.dto.*;
+import com.digitaldad.service.ProjectBoardService;
 import com.digitaldad.common.result.Result;
-import com.digitaldad.user.security.UserPrincipal;
+import com.digitaldad.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

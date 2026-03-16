@@ -1,6 +1,6 @@
-package com.digitaldad.config.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.config.entity.SysConfig;
+import com.digitaldad.entity.SysConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

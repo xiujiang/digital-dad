@@ -1,13 +1,13 @@
-package com.digitaldad.ai.service;
+package com.digitaldad.service;
 
-import com.digitaldad.ai.entity.SpeechTranscriptionUsage;
-import com.digitaldad.ai.repository.SpeechTranscriptionUsageRepository;
+import com.digitaldad.entity.SpeechTranscriptionUsage;
+import com.digitaldad.repository.SpeechTranscriptionUsageRepository;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.config.service.ConfigService;
-import com.digitaldad.user.entity.UserQuota;
-import com.digitaldad.user.enums.QuotaType;
+import com.digitaldad.service.ConfigService;
+import com.digitaldad.entity.UserQuota;
+import com.digitaldad.enums.QuotaType;
 import java.util.Set;
-import com.digitaldad.user.repository.UserQuotaRepository;
+import com.digitaldad.repository.UserQuotaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

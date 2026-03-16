@@ -1,7 +1,7 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.InterviewSession;
-import com.digitaldad.project.enums.SessionStatus;
+import com.digitaldad.entity.InterviewSession;
+import com.digitaldad.enums.SessionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +17,18 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
 
     Optional<InterviewSession> findByParticipantIdAndStatusIn(
             Long participantId, List<SessionStatus> statuses);
+
+    /** 按参与者 + 板块查会话（唯一约束 uk_participant_board，用于「进入某板块」时先查是否已有会话） */
+    Optional<InterviewSession> findByParticipantIdAndCurrentProjectBoardId(
+            Long participantId, Long currentProjectBoardId);
+
+    /** 按参与者 + 板块 + 状态查会话（用于「进入某板块」时恢复或创建） */
+    Optional<InterviewSession> findByParticipantIdAndCurrentProjectBoardIdAndStatusIn(
+            Long participantId, Long currentProjectBoardId, List<SessionStatus> statuses);
+
+    /** 某参与者在某项目下的所有会话（用于 my-status 按板块聚合进度） */
+    List<InterviewSession> findByParticipantIdAndProjectIdOrderByCreatedAtAsc(
+            Long participantId, Long projectId);
 
     List<InterviewSession> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 

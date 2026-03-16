@@ -1,6 +1,6 @@
-package com.digitaldad.board.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.board.entity.ProjectBoard;
+import com.digitaldad.entity.ProjectBoard;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

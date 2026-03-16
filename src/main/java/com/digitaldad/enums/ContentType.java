@@ -1,4 +1,4 @@
-package com.digitaldad.project.enums;
+package com.digitaldad.enums;
 
 /**
  * 生成物类型

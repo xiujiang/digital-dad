@@ -1,8 +1,8 @@
-package com.digitaldad.user.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.config.TencentSmsProperties;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.user.enums.SmsScene;
+import com.digitaldad.enums.SmsScene;
 import com.tencentcloudapi.common.Credential;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.sms.v20210111.SmsClient;
@@ -81,7 +81,11 @@ public class SmsService {
             req.setSmsSdkAppId(tencentSmsProps.getSdkAppId());
             req.setSignName(tencentSmsProps.getSignName());
             req.setTemplateId(tencentSmsProps.getTemplateId());
-            req.setTemplateParamSet(new String[]{code});
+            int paramCount = tencentSmsProps.getTemplateParamCount();
+            String[] templateParams = paramCount >= 2
+                    ? new String[]{code, String.valueOf(CODE_EXPIRE_SECONDS / 60)}
+                    : new String[]{code};
+            req.setTemplateParamSet(templateParams);
 
             SendSmsResponse resp = client.SendSms(req);
             if (resp.getSendStatusSet() != null && resp.getSendStatusSet().length > 0) {

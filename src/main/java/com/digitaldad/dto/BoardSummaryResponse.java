@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +25,7 @@ public class BoardSummaryResponse {
     private LocalDateTime confirmedAt;
 
     private List<SummaryItemResponse> items;
+
+    /** 本小结绑定的关键人物（用户角色库） */
+    private List<KeyPersonResponse> keyPersons;
 }

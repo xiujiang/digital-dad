@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -23,4 +23,7 @@ public class ProjectInfoResponse {
 
     /** 可选角色列表（如新郎、新娘），含是否已被占用；前端据此展示「选择身份」 */
     private List<EntryRoleOption> roleOptions;
+
+    /** 主持人信息（姓名、联系方式等，供 C 端展示） */
+    private EntryHostInfo host;
 }

@@ -1,6 +1,6 @@
-package com.digitaldad.user.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.user.enums.QuotaType;
+import com.digitaldad.enums.QuotaType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,7 +24,7 @@ public class UserQuota {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "quota_type", nullable = false, length = 20)
+    @Column(name = "quota_type", nullable = false, length = 32)
     private QuotaType quotaType;
 
     @Column(name = "remaining", nullable = false)

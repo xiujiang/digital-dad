@@ -1,4 +1,4 @@
-package com.digitaldad.board.enums;
+package com.digitaldad.enums;
 
 /**
  * 板块元数据状态

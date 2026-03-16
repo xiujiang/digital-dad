@@ -1,8 +1,8 @@
-package com.digitaldad.prompt.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.prompt.dto.*;
-import com.digitaldad.prompt.service.PromptSceneService;
+import com.digitaldad.dto.*;
+import com.digitaldad.service.PromptSceneService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +47,19 @@ public class AdminPromptSceneController {
     @GetMapping("/{id}")
     public Result<PromptSceneResponse> get(@PathVariable Long id) {
         return Result.ok(sceneService.getById(id));
+    }
+
+    /**
+     * 创建场景并同时创建并绑定一条提示词（首版）
+     * <p>一次请求完成：创建场景 → 创建提示词（version_no=1）→ 添加场景项。返回带条目的场景详情。</p>
+     *
+     * @param request 场景字段 + 首条提示词字段 + 该条在场景中的顺序与用法
+     * @return 新建的场景（含已绑定的首条提示词）
+     */
+    @PostMapping("/with-first-prompt")
+    public Result<PromptSceneResponse> createWithFirstPrompt(
+            @Valid @RequestBody CreateSceneWithFirstPromptRequest request) {
+        return Result.ok(sceneService.createWithFirstPrompt(request));
     }
 
     /**

@@ -1,13 +1,13 @@
-package com.digitaldad.user.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.exception.BusinessException;
 import com.digitaldad.common.result.Result;
-import com.digitaldad.user.dto.*;
-import com.digitaldad.user.security.UserPrincipal;
-import com.digitaldad.user.service.AdminHostService;
-import com.digitaldad.user.service.AuthService;
-import com.digitaldad.user.service.HostUserService;
-import com.digitaldad.user.service.MemberService;
+import com.digitaldad.dto.*;
+import com.digitaldad.security.UserPrincipal;
+import com.digitaldad.service.AdminHostService;
+import com.digitaldad.service.AuthService;
+import com.digitaldad.service.HostUserService;
+import com.digitaldad.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

@@ -1,6 +1,6 @@
-package com.digitaldad.user.util;
+package com.digitaldad.util;
 
-import com.digitaldad.user.config.JwtProperties;
+import com.digitaldad.common.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

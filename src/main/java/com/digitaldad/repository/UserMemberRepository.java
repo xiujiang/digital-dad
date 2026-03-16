@@ -1,7 +1,7 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.UserMember;
-import com.digitaldad.user.enums.MemberStatus;
+import com.digitaldad.entity.UserMember;
+import com.digitaldad.enums.MemberStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

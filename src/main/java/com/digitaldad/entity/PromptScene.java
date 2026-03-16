@@ -1,8 +1,8 @@
-package com.digitaldad.prompt.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.prompt.enums.PromptRoleType;
-import com.digitaldad.prompt.enums.PromptSceneScope;
-import com.digitaldad.prompt.enums.PromptStatus;
+import com.digitaldad.enums.PromptRoleType;
+import com.digitaldad.enums.PromptSceneScope;
+import com.digitaldad.enums.PromptStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

@@ -1,8 +1,9 @@
-package com.digitaldad.project.service;
+package com.digitaldad.service;
 
-import com.digitaldad.ai.dto.ChatMessage;
+import com.digitaldad.dto.ChatMessage;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * AI 对话服务接口
@@ -18,6 +19,20 @@ public interface AiChatService {
      * @return AI 回复内容
      */
     String chat(String systemPrompt, List<String> userMessages);
+
+    /**
+     * 带历史上下文的流式对话，每收到一段内容就回调 onDelta
+     *
+     * @param systemPrompt 系统提示词
+     * @param messages     包含 role、content 的消息列表
+     * @param onDelta      每收到一段增量内容时回调（可能为空字符串，需过滤）
+     */
+    default void chatWithHistoryStream(String systemPrompt, List<ChatMessage> messages, Consumer<String> onDelta) {
+        String full = chatWithHistory(systemPrompt, messages);
+        if (full != null && !full.isEmpty() && onDelta != null) {
+            onDelta.accept(full);
+        }
+    }
 
     /**
      * 带历史上下文的对话
@@ -49,7 +64,7 @@ public interface AiChatService {
      * 根据对话内容生成故事叙述
      *
      * @param prompt       提示词
-     * @param conversation 对话全文
+     * @param conversation 小结内容全文（故事基于小结生成）
      * @param boardName    板块名称
      * @return 故事文本
      */

@@ -1,7 +1,7 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.QuotaFlow;
-import com.digitaldad.user.enums.QuotaType;
+import com.digitaldad.entity.QuotaFlow;
+import com.digitaldad.enums.QuotaType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

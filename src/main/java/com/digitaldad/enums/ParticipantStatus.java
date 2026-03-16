@@ -1,4 +1,4 @@
-package com.digitaldad.project.enums;
+package com.digitaldad.enums;
 
 /**
  * 项目参与者状态

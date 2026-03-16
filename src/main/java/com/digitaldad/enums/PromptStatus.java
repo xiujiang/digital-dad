@@ -1,4 +1,4 @@
-package com.digitaldad.prompt.enums;
+package com.digitaldad.enums;
 
 /**
  * 提示词/场景状态

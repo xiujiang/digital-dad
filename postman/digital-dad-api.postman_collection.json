@@ -2,16 +2,16 @@
 	"info": {
 		"_postman_id": "digital-dad-api-2024",
 		"name": "数字爸爸 API",
-		"description": "数字爸爸 - 婚礼采访与生成平台 API 测试用例\n\n使用说明：\n1. 先调用「认证-发送验证码」获取验证码\n2. 调用「认证-主持人登录」或「认证-超管登录」获取 token（均为 POST /api/auth/login，超管登录时 body 增加 \"admin\": true）\n3. 主持人 token 存入变量 token，超管 token 存入 adminToken（登录接口 Tests 已自动处理）\n4. 当前用户、项目、板块、用户资料等统一路径，主持人/超管用各自 token 即可\n5. 需认证接口使用 Authorization: Bearer {{token}} 或 {{adminToken}}",
+		"description": "数字爸爸 - 婚礼采访与生成平台 API 测试用例\n\n使用说明：\n1. 先调用「认证-发送验证码」获取验证码\n2. 调用「认证-主持人登录」或「认证-超管登录」获取 token（均为 POST /api/auth/login，超管登录时 body 增加 \"admin\": true）\n3. 主持人 token 存入变量 token，超管 token 存入 adminToken（登录接口 Tests 已自动处理）\n4. 当前用户、项目、板块、用户资料等统一路径，主持人/超管用各自 token 即可\n5. 需认证接口使用 Authorization: Bearer {{token}} 或 {{adminToken}}\n6. 「获取分享入口」返回 entryUrl、qrCodeUrl、wechatScheme、wechatSchemeQrCodeUrl；成功后会自动把 shareToken 写入集合变量，便于在「C端-入口-扫码入口」中直接使用\n7. C 端会话按板块：先调「获取 my-status」，再调「进入项目采访」传 projectId + projectBoardId（my-status 成功后会写入 projectBoardId、sessionId，可直接用「进入项目采访」）",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
-		{"key": "baseUrl", "value": "http://101.34.64.224:8080"},
-		{"key": "token", "value": ""},
-		{"key": "adminToken", "value": ""},
-		{"key": "projectId", "value": "1"},
+		{"key": "baseUrl", "value": "http://localhost:8080"},
+		{"key": "token", "value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzIiwicm9sZXMiOlsiSE9TVCIsIlNVUEVSX0FETUlOIl0sInBob25lIjoiMTM2MjM2NDE1MDEiLCJpYXQiOjE3NzM0NjYyMjYsImV4cCI6MTc3MzU1MjYyNn0.I4-pvVE60rQgQKfvS-k6_GQcItpYM2_NWuHVAHb2uGD0poNspaQbW1c2SfxjsDDq"},
+		{"key": "adminToken", "value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzIiwicm9sZXMiOlsiSE9TVCIsIlNVUEVSX0FETUlOIl0sInBob25lIjoiMTM2MjM2NDE1MDEiLCJpYXQiOjE3NzM0NjYyMjYsImV4cCI6MTc3MzU1MjYyNn0.I4-pvVE60rQgQKfvS-k6_GQcItpYM2_NWuHVAHb2uGD0poNspaQbW1c2SfxjsDDq"},
+		{"key": "projectId", "value": "3"},
+		{"key": "projectBoardId", "value": "1"},
 		{"key": "sessionId", "value": "1"},
-		{"key": "participantId", "value": "1"},
 		{"key": "messageId", "value": "1"},
 		{"key": "summaryId", "value": "1"},
 		{"key": "itemId", "value": "1"},
@@ -22,7 +22,8 @@
 		{"key": "sceneId", "value": "1"},
 		{"key": "hostId", "value": "1"},
 		{"key": "shareToken", "value": "your-share-token"},
-		{"key": "phone", "value": "13800138000"}
+		{"key": "phone", "value": "13623641501"},
+		{"key": "baseUrlWs", "value": "ws://101.34.64.224:8080"}
 	],
 	"item": [
 		{
@@ -126,6 +127,46 @@
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
 						"url": "{{baseUrl}}/api/auth/me"
 					}
+				},
+				{
+					"name": "密码登录",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{phone}}\",\n  \"password\": \"your_password\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login-password"
+					}
+				},
+				{
+					"name": "微信小程序登录",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"前端 wx.login() 获得的临时 code，必填\",\n  \"nickName\": \"微信用户\",\n  \"avatarUrl\": \"https://...\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/wechat-login",
+						"description": "C 端微信小程序登录。前端调用 wx.login() 得到 code 后传到此接口；后端用 code 调微信 jscode2session 换 openid，查/建用户、写登录流水并签发 JWT。body 必填 code；nickName、avatarUrl 等可选，用于完善用户资料。测试时 code 需为小程序真实获取的临时凭证（5 分钟有效）。"
+					}
+				},
+				{
+					"name": "设置/修改密码",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newPassword\": \"new_password\",\n  \"oldPassword\": null\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/set-password"
+					}
 				}
 			]
 		},
@@ -146,22 +187,33 @@
 			"name": "C端-绑定与会话",
 			"item": [
 				{
-					"name": "绑定参与者",
+					"name": "获取my-status(当前用户在该项目下的状态)",
 					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"role\": \"GROOM\"\n}"
-						},
-						"url": "{{baseUrl}}/api/c/projects/{{projectId}}/bind"
-					}
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/projects/{{projectId}}/my-status",
+						"description": "返回当前用户在该项目下的步骤（step）、sessionId、currentProjectBoardId、板块列表等。\n\n- sessionId 为当前应进入板块的会话（有则返回，无则 null）；为 null 时用 currentProjectBoardId 调「进入项目采访」。\n- 会话按板块：换板块需重新调 POST /api/c/sessions 传新的 projectBoardId。"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var json = pm.response.json();",
+									"if (json.data && json.data.currentProjectBoardId != null) {",
+									"  pm.collectionVariables.set('projectBoardId', json.data.currentProjectBoardId);",
+									"}",
+									"if (json.data && json.data.sessionId != null) {",
+									"  pm.collectionVariables.set('sessionId', json.data.sessionId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
-					"name": "创建/恢复会话",
+					"name": "进入项目采访(绑定+创建/恢复该板块会话)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -170,10 +222,55 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"participantId\": {{participantId}}\n}"
+							"raw": "{\n  \"projectId\": {{projectId}},\n  \"projectBoardId\": {{projectBoardId}},\n  \"role\": \"GROOM\"\n}"
 						},
-						"url": "{{baseUrl}}/api/c/sessions"
-					}
+						"url": "{{baseUrl}}/api/c/sessions",
+						"description": "一步完成「选身份绑定 + 创建或恢复该板块的会话」。会话按板块：一个 session 仅对应某用户在某板块下的对话，换板块会产生新 session。\n\n- body 必填：projectId、projectBoardId（可从 my-status 的 currentProjectBoardId 取得）。\n- 未绑定时必填 role（GROOM/BRIDE）；已绑定时 role 可省略。\n- 成功响应后 Tests 会将 sessionId 写入集合变量。"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var json = pm.response.json();",
+									"if (json.data && json.data.id) {",
+									"  pm.collectionVariables.set('sessionId', json.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "进入项目采访-已绑定(projectId+projectBoardId)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{projectId}},\n  \"projectBoardId\": {{projectBoardId}}\n}"
+						},
+						"url": "{{baseUrl}}/api/c/sessions",
+						"description": "已绑定用户进入/恢复某板块会话，body 传 projectId + projectBoardId（无需 role）。建议先调 my-status 获取 currentProjectBoardId，或使用集合变量 projectBoardId。"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var json = pm.response.json();",
+									"if (json.data && json.data.id) {",
+									"  pm.collectionVariables.set('sessionId', json.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "获取会话",
@@ -236,6 +333,32 @@
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
 						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/submit"
 					}
+				},
+				{
+					"name": "流式提交(WebSocket)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrlWs}}/api/c/ws/submit-stream?token={{token}}",
+						"description": "WebSocket 流式提交：连接后发送一条文本消息 {\"sessionId\": <sessionId>}，服务端会推送 type=delta 的 AI 增量、最后一条 type=done（含 messageId、roundCount）或 type=error。\n\n使用步骤：\n1. 确保 baseUrlWs 与当前环境一致（如本地为 ws://localhost:8080）；\n2. 先调用「主持人登录」或「微信小程序登录」获取 token，并确保有 sessionId（可先「进入项目采访」再「获取会话」或从 my-status 取得）；\n3. 在 Postman 中新建 WebSocket Request，URL 填 {{baseUrlWs}}/api/c/ws/submit-stream?token={{token}}；\n4. Connect 后，在 Send 框输入 {\"sessionId\": {{sessionId}}} 发送；\n5. 在响应区查看逐条 delta 与最终 done/error。"
+					}
+				},
+				{
+					"name": "获取语音转写配额",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/c/speech-quota"
+					}
+				},
+				{
+					"name": "实时语音转写(WebSocket)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrlWs}}/api/c/ws/speech-recognition?token={{token}}",
+						"description": "实时语音转写 WebSocket。\n\nToken：URL 参数 ?token={{token}} 或 Header Authorization: Bearer {{token}}。\n\n连接后发送 Binary（PCM 16k/16bit/mono，约 100～200ms/包）或 Text \"end\"/\"stop\" 结束。服务端返回 Text：{\"type\":\"transcript\",\"text\":\"...\"} 或 {\"type\":\"error\",\"message\":\"...\"}。\n\n用本地音频文件自测（无需手发 Binary）：\n1. cd scripts/speech-recognition-ws-client && npm install\n2. TOKEN={{token}} node send-audio.js <你的.wav或.pcm> [--url={{baseUrlWs}}]\n3. 音频须为 PCM 16k/16bit/单声道；.wav 会自动去头。详见 scripts/speech-recognition-ws-client/README.md"
+					}
 				}
 			]
 		},
@@ -247,15 +370,33 @@
 					"request": {
 						"method": "POST",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/summaries"
-					}
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/summaries",
+						"description": "根据当前会话对话由 AI 生成小结并立即确认（事实 + 关键人物），解析入库后写入素材快照、推进板块进度。响应 data 为小结对象，含 items、keyPersons，状态为已确认。"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var json = pm.response.json();",
+									"if (json.data && json.data.id) { pm.collectionVariables.set('summaryId', json.data.id); }",
+									"if (json.data) {",
+									"  pm.test('data 含 items', function() { pm.expect(json.data).to.have.property('items'); });",
+									"  pm.test('data 含 keyPersons', function() { pm.expect(json.data).to.have.property('keyPersons'); });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "获取当前小结",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/summaries/current"
+						"url": "{{baseUrl}}/api/c/sessions/{{sessionId}}/summaries/current",
+						"description": "获取该会话下当前有效的一份小结。响应 data 含 items、keyPersons；无小结时 data 为 null。"
 					}
 				},
 				{
@@ -263,7 +404,8 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}"
+						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}",
+						"description": "根据小结 ID 查询详情。响应 data 为板块小结对象，含 items（事实/表达）、keyPersons（本小结绑定的关键人物）。"
 					}
 				},
 				{
@@ -305,11 +447,19 @@
 					}
 				},
 				{
-					"name": "确认小结",
+					"name": "设置小结关键人物",
 					"request": {
-						"method": "POST",
-						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}/confirm"
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"keyPersonIds\": [1, 2]\n}"
+						},
+						"url": "{{baseUrl}}/api/c/board-summaries/{{summaryId}}/key-persons",
+						"description": "设置本小结绑定的关键人物 ID 列表（须为当前用户已有的关键人物）。未确认的小结可修改；已确认后不可改。之后获取小结详情/当前小结时 keyPersons 即为此列表。"
 					}
 				}
 			]
@@ -416,12 +566,53 @@
 					}
 				},
 				{
+					"name": "更新项目",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"groomName\": \"张先生\",\n  \"brideName\": \"李女士\",\n  \"weddingDate\": \"2025-06-01\"\n}"
+						},
+						"url": "{{baseUrl}}/api/projects/{{projectId}}"
+					}
+				},
+				{
 					"name": "获取分享入口",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-						"url": "{{baseUrl}}/api/projects/{{projectId}}/share"
-					}
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/share",
+						"description": "获取该项目的分享链接与二维码，用于 C 端扫码/链接进入。\n\n响应 data 字段：\n- projectId: 项目 ID\n- shareToken: 分享令牌（C 端入口 GET /api/c/entry/{token} 的 path 参数）\n- entryUrl: H5 入口 URL\n- qrCodeUrl: 基于 entryUrl 的二维码图片 URL\n- wechatScheme: 微信小程序 URL Scheme（weixin://dl/business/?t=xxx），未配置小程序或生成失败时为 null\n- wechatSchemeQrCodeUrl: 基于 wechatScheme 的二维码图片 URL，无 scheme 时为 null\n\n成功响应后 Tests 会自动把 shareToken 写入集合变量，便于在「C端-入口-扫码入口」中直接使用。"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var json = pm.response.json();",
+									"if (json.data && json.data.shareToken) {",
+									"  pm.collectionVariables.set('shareToken', json.data.shareToken);",
+									"}",
+									"pm.test('分享入口返回成功', function() { pm.expect(json.code).to.eql(0); });",
+									"pm.test('data 含 projectId、shareToken、entryUrl、qrCodeUrl', function() {",
+									"  pm.expect(json.data).to.have.property('projectId');",
+									"  pm.expect(json.data).to.have.property('shareToken');",
+									"  pm.expect(json.data).to.have.property('entryUrl');",
+									"  pm.expect(json.data).to.have.property('qrCodeUrl');",
+									"});",
+									"pm.test('可选字段 wechatScheme / wechatSchemeQrCodeUrl 存在', function() {",
+									"  pm.expect(json.data).to.have.property('wechatScheme');",
+									"  pm.expect(json.data).to.have.property('wechatSchemeQrCodeUrl');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
@@ -540,6 +731,14 @@
 						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
 						"url": "{{baseUrl}}/api/deliverables/{{deliverableId}}"
 					}
+				},
+				{
+					"name": "交付物元数据-启用列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+						"url": "{{baseUrl}}/api/deliverable-meta/enabled"
+					}
 				}
 			]
 		},
@@ -657,6 +856,14 @@
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
 						"url": "{{baseUrl}}/api/users/{{hostId}}/quota-flows?page=1&size=10"
 					}
+				},
+				{
+					"name": "删除主持人",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/users/{{hostId}}"
+					}
 				}
 			]
 		},
@@ -741,8 +948,188 @@
 			]
 		},
 		{
+			"name": "交付物元数据(主持人/超管)",
+			"item": [
+				{
+					"name": "交付物元数据列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/deliverable-meta"
+					}
+				},
+				{
+					"name": "交付物元数据-已启用",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/deliverable-meta/enabled"
+					}
+				},
+				{
+					"name": "交付物元数据详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/deliverable-meta/1"
+					}
+				},
+				{
+					"name": "创建交付物元数据",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"OPENING_SPEECH\",\n  \"name\": \"婚礼开场白\",\n  \"displayOrder\": 1,\n  \"description\": \"根据新郎新娘已确认素材生成婚礼开场白\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/deliverable-meta"
+					}
+				},
+				{
+					"name": "更新交付物元数据",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"婚礼开场白(更新)\",\n  \"displayOrder\": 1,\n  \"description\": \"更新描述\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/deliverable-meta/1"
+					}
+				},
+				{
+					"name": "删除交付物元数据",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/deliverable-meta/1"
+					}
+				}
+			]
+		},
+		{
+			"name": "超管-仪表盘与配置",
+			"item": [
+				{
+					"name": "仪表盘总览",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/dashboard"
+					}
+				},
+				{
+					"name": "交付物列表(全量)",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/deliverables?page=1&size=10"
+					}
+				},
+				{
+					"name": "增加语音转写配额",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"addSeconds\": 600\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/speech-quota/add"
+					}
+				},
+				{
+					"name": "获取密码策略",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/config/password-policy"
+					}
+				},
+				{
+					"name": "更新密码策略",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"minLength\": 8,\n  \"requireDigit\": true,\n  \"requireLowercase\": true,\n  \"requireUppercase\": false,\n  \"requireSpecialChar\": false\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/config/password-policy"
+					}
+				}
+			]
+		},
+		{
 			"name": "超管-提示词",
 			"item": [
+				{
+					"name": "提示词列表",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompts?contentType=TEXT&status=ENABLED"
+					}
+				},
+				{
+					"name": "提示词详情",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompts/1"
+					}
+				},
+				{
+					"name": "创建提示词",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"opening_prompt\",\n  \"name\": \"开场白提示词\",\n  \"contentType\": \"TEXT\",\n  \"content\": \"你是婚礼采访助手...\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompts"
+					}
+				},
+				{
+					"name": "更新提示词",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"开场白提示词(更新)\",\n  \"contentType\": \"TEXT\",\n  \"content\": \"更新内容\",\n  \"status\": \"ENABLED\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompts/1"
+					}
+				},
+				{
+					"name": "删除提示词",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompts/1"
+					}
+				},
 				{
 					"name": "按场景获取提示词",
 					"request": {
@@ -758,30 +1145,25 @@
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
 						"url": "{{baseUrl}}/api/admin/prompts/scene/WEDDING_INTRO/combined"
 					}
-				}
-			]
-		},
-		{
-			"name": "超管-提示词模板",
-			"item": [
+				},
 				{
-					"name": "模板列表",
+					"name": "提示词(按code)版本列表",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates?contentType=TEXT"
+						"url": "{{baseUrl}}/api/admin/prompts/opening_prompt/versions"
 					}
 				},
 				{
-					"name": "模板详情",
+					"name": "提示词(按code)版本详情",
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}"
+						"url": "{{baseUrl}}/api/admin/prompts/opening_prompt/versions/{{versionId}}"
 					}
 				},
 				{
-					"name": "创建模板",
+					"name": "提示词(按code)创建版本",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -790,32 +1172,25 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"code\": \"opening_template\",\n  \"name\": \"开场白模板\",\n  \"contentType\": \"TEXT\",\n  \"description\": \"婚礼开场白\",\n  \"status\": \"ENABLED\"\n}"
+							"raw": "{\n  \"content\": \"新版本内容\",\n  \"setActive\": false\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/prompt-templates"
+						"url": "{{baseUrl}}/api/admin/prompts/opening_prompt/versions"
 					}
 				},
 				{
-					"name": "更新模板",
+					"name": "提示词(按code)激活版本",
 					"request": {
 						"method": "PUT",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"开场白模板(更新)\",\n  \"contentType\": \"TEXT\",\n  \"description\": \"更新描述\",\n  \"status\": \"ENABLED\"\n}"
-						},
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}"
+						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+						"url": "{{baseUrl}}/api/admin/prompts/opening_prompt/versions/{{versionId}}/activate"
 					}
 				},
 				{
-					"name": "删除模板",
+					"name": "提示词(按code)删除版本",
 					"request": {
 						"method": "DELETE",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}"
+						"url": "{{baseUrl}}/api/admin/prompts/opening_prompt/versions/{{versionId}}"
 					}
 				}
 			]
@@ -828,7 +1203,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions"
+						"url": "{{baseUrl}}/api/admin/prompts/{{promptCode}}/versions"
 					}
 				},
 				{
@@ -836,7 +1211,7 @@
 					"request": {
 						"method": "GET",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions/{{versionId}}"
+						"url": "{{baseUrl}}/api/admin/prompts/{{promptCode}}/versions/{{versionId}}"
 					}
 				},
 				{
@@ -851,7 +1226,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"content\": \"版本内容\",\n  \"setActive\": true\n}"
 						},
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions"
+						"url": "{{baseUrl}}/api/admin/prompts/{{promptCode}}/versions"
 					}
 				},
 				{
@@ -859,7 +1234,7 @@
 					"request": {
 						"method": "PUT",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions/{{versionId}}/activate"
+						"url": "{{baseUrl}}/api/admin/prompts/{{promptCode}}/versions/{{versionId}}/activate"
 					}
 				},
 				{
@@ -867,7 +1242,7 @@
 					"request": {
 						"method": "DELETE",
 						"header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
-						"url": "{{baseUrl}}/api/admin/prompt-templates/{{templateId}}/versions/{{versionId}}"
+						"url": "{{baseUrl}}/api/admin/prompts/{{promptCode}}/versions/{{versionId}}"
 					}
 				}
 			]
@@ -904,6 +1279,21 @@
 							"raw": "{\n  \"code\": \"wedding_intro\",\n  \"name\": \"婚礼介绍\",\n  \"scope\": \"GLOBAL\",\n  \"boardCode\": null,\n  \"roleType\": null,\n  \"description\": \"婚礼介绍场景\",\n  \"status\": \"ENABLED\"\n}"
 						},
 						"url": "{{baseUrl}}/api/admin/prompt-scenes"
+					}
+				},
+				{
+					"name": "创建场景并绑定首条提示词",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"MY_NEW_SCENE\",\n  \"name\": \"我的新场景\",\n  \"scope\": \"GLOBAL\",\n  \"boardCode\": null,\n  \"roleType\": null,\n  \"description\": \"新场景说明\",\n  \"status\": \"ENABLED\",\n  \"firstPromptCode\": \"MY_NEW_PROMPT\",\n  \"firstPromptName\": \"新场景首条提示词\",\n  \"firstPromptContent\": \"你是一个温暖的婚礼助手，请根据用户素材生成真挚内容。\",\n  \"firstPromptContentType\": \"TEXT\",\n  \"firstPromptDescription\": null,\n  \"firstPromptStatus\": \"ENABLED\",\n  \"firstPromptDisplayOrder\": 0,\n  \"firstPromptUsageMode\": \"APPEND\"\n}"
+						},
+						"url": "{{baseUrl}}/api/admin/prompt-scenes/with-first-prompt"
 					}
 				},
 				{

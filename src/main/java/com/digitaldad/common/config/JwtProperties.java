@@ -1,4 +1,4 @@
-package com.digitaldad.user.config;
+package com.digitaldad.common.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

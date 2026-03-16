@@ -1,30 +1,30 @@
-package com.digitaldad.user.service;
+package com.digitaldad.service;
 
-import com.digitaldad.common.config.WeChatMiniprogramProperties;
 import com.digitaldad.common.exception.BusinessException;
+import com.digitaldad.dto.WeChatLoginRequest;
 import com.digitaldad.config.dto.PasswordPolicyConfigDto;
-import com.digitaldad.config.service.ConfigService;
-import com.digitaldad.user.dto.LoginResponse;
-import com.digitaldad.user.dto.CurrentUserResponse;
-import com.digitaldad.user.entity.User;
-import com.digitaldad.user.entity.UserRole;
-import com.digitaldad.user.entity.UserWechat;
-import com.digitaldad.user.enums.SmsScene;
-import com.digitaldad.user.enums.UserStatus;
-import com.digitaldad.user.repository.UserRepository;
-import com.digitaldad.user.repository.UserRoleRepository;
-import com.digitaldad.user.repository.UserWechatRepository;
-import com.digitaldad.user.util.JwtUtils;
+import com.digitaldad.dto.LoginResponse;
+import com.digitaldad.dto.CurrentUserResponse;
+import com.digitaldad.dto.WeChatCode2SessionResponse;
+import com.digitaldad.entity.User;
+import com.digitaldad.entity.UserLoginLog;
+import com.digitaldad.entity.UserRole;
+import com.digitaldad.entity.UserWechat;
+import com.digitaldad.enums.SmsScene;
+import com.digitaldad.enums.UserStatus;
+import com.digitaldad.repository.UserLoginLogRepository;
+import com.digitaldad.repository.UserRepository;
+import com.digitaldad.repository.UserRoleRepository;
+import com.digitaldad.repository.UserWechatRepository;
+import com.digitaldad.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -39,12 +39,12 @@ public class AuthService {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final UserWechatRepository userWechatRepository;
+    private final UserLoginLogRepository userLoginLogRepository;
+    private final WeChatMiniProgramService weChatMiniProgramService;
     private final SmsService smsService;
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
     private final ConfigService configService;
-    private final WeChatMiniprogramProperties wechatMiniprogram;
-    private final RestTemplate restTemplate = new RestTemplate();
 
     public void sendCode(String phone) {
         smsService.sendCode(phone, SmsScene.LOGIN);
@@ -103,40 +103,26 @@ public class AuthService {
     }
 
     /**
-     * 微信小程序登录（小程序端将 wx.login() 得到的 code 发到后端，后端用 code 调微信 code2session 换 openid，查/建用户后签发 JWT）
+     * 微信小程序登录/注册（后端用 code 调微信 jscode2session 换 openid，再查/建用户、写登录流水并签发 JWT）
+     *
+     * @param request   必填 code；可选 nickName、avatarUrl 等用于完善资料
+     * @param clientIp  请求 IP（写登录流水，可为 null）
+     * @param userAgent User-Agent（写登录流水，可为 null）
      */
     @Transactional
-    public LoginResponse wechatLogin(String code) {
-        if (wechatMiniprogram.getAppId() == null || wechatMiniprogram.getAppId().isBlank()
-                || wechatMiniprogram.getAppSecret() == null || wechatMiniprogram.getAppSecret().isBlank()) {
-            throw new BusinessException(503, "微信登录未配置，请联系管理员");
+    public LoginResponse wechatLogin(WeChatLoginRequest request, String clientIp, String userAgent) {
+        String code = request.getCode() != null ? request.getCode().trim() : "";
+        if (code.isEmpty()) {
+            throw new BusinessException(400, "code 不能为空");
         }
-        String url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + wechatMiniprogram.getAppId()
-                + "&secret=" + wechatMiniprogram.getAppSecret()
-                + "&js_code=" + code
-                + "&grant_type=authorization_code";
-        Map<?, ?> resp;
-        try {
-            resp = restTemplate.getForObject(url, Map.class);
-        } catch (Exception e) {
-            log.warn("微信 code2session 请求异常", e);
-            throw new BusinessException(502, "微信服务暂时不可用，请稍后重试");
-        }
-        if (resp == null) {
-            throw new BusinessException(502, "微信登录失败");
-        }
-        if (resp.containsKey("errcode")) {
-            Object e = resp.get("errcode");
-            int code = e instanceof Number ? ((Number) e).intValue() : -1;
-            if (code != 0) {
-                log.warn("微信 code2session 返回错误: errcode={}, errmsg={}", e, resp.get("errmsg"));
-                throw new BusinessException(401, "微信登录失败，请重试");
-            }
-        }
-        String openid = (String) resp.get("openid");
-        if (openid == null || openid.isBlank()) {
-            throw new BusinessException(502, "微信登录失败");
-        }
+
+        WeChatCode2SessionResponse session = weChatMiniProgramService.code2session(code);
+        String openid = session.getOpenid();
+        String sessionKey = session.getSessionKey();
+        String unionidFromWechat = session.getUnionid();
+        String unionid = request.getUnionId() != null && !request.getUnionId().isBlank()
+                ? request.getUnionId().trim()
+                : unionidFromWechat;
 
         String appType = "miniprogram";
         var existingWechat = userWechatRepository.findByAppTypeAndOpenid(appType, openid);
@@ -144,11 +130,31 @@ public class AuthService {
         if (existingWechat.isPresent()) {
             user = userRepository.findById(existingWechat.get().getUserId())
                     .orElseThrow(() -> new BusinessException(404, "用户不存在"));
+            if (request.getNickName() != null && !request.getNickName().isBlank()) {
+                user.setName(request.getNickName().trim());
+            }
+            if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
+                user.setAvatarUrl(request.getAvatarUrl().trim());
+            }
+            userRepository.save(user);
+            UserWechat wechat = existingWechat.get();
+            if (request.getNickName() != null) wechat.setNickname(request.getNickName());
+            if (request.getAvatarUrl() != null) wechat.setAvatarUrl(request.getAvatarUrl());
+            if (unionid != null) wechat.setUnionid(unionid);
+            if (request.getGender() != null) wechat.setGender(request.getGender());
+            if (request.getCountry() != null) wechat.setCountry(request.getCountry());
+            if (request.getProvince() != null) wechat.setProvince(request.getProvince());
+            if (request.getCity() != null) wechat.setCity(request.getCity());
+            if (sessionKey != null && !sessionKey.isBlank()) {
+                wechat.setSessionKey(sessionKey);
+            }
+            userWechatRepository.save(wechat);
         } else {
             user = new User();
             user.setStatus(UserStatus.ENABLED);
             user.setPhone(null);
-            user.setName(null);
+            user.setName(request.getNickName() != null && !request.getNickName().isBlank() ? request.getNickName().trim() : null);
+            user.setAvatarUrl(request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank() ? request.getAvatarUrl().trim() : null);
             user = userRepository.save(user);
             UserRole role = new UserRole();
             role.setUserId(user.getId());
@@ -158,15 +164,31 @@ public class AuthService {
             wechat.setUserId(user.getId());
             wechat.setOpenid(openid);
             wechat.setAppType(appType);
-            wechat.setUnionid(resp.get("unionid") != null ? resp.get("unionid").toString() : null);
+            wechat.setUnionid(unionid);
+            wechat.setSessionKey(sessionKey);
+            wechat.setNickname(request.getNickName());
+            wechat.setAvatarUrl(request.getAvatarUrl());
+            wechat.setGender(request.getGender());
+            wechat.setCountry(request.getCountry());
+            wechat.setProvince(request.getProvince());
+            wechat.setCity(request.getCity());
             userWechatRepository.save(wechat);
             log.info("微信用户自动注册: openid={}, userId={}", openid, user.getId());
         }
+
         if (user.getStatus() == UserStatus.DISABLED) {
             throw new BusinessException(401, "账号已被禁用，请联系管理员");
         }
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
+
+        UserLoginLog loginLog = new UserLoginLog();
+        loginLog.setUserId(user.getId());
+        loginLog.setLoginAt(LocalDateTime.now());
+        loginLog.setChannel("WECHAT_MINIPROGRAM");
+        loginLog.setIp(clientIp);
+        loginLog.setUserAgent(userAgent);
+        userLoginLogRepository.save(loginLog);
 
         List<String> roles = loadRoles(user.getId());
         String token = jwtUtils.generateToken(user.getId(), roles, user.getPhone());
@@ -177,6 +199,7 @@ public class AuthService {
                 .roles(roles)
                 .name(user.getName())
                 .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 

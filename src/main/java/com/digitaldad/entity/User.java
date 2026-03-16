@@ -1,7 +1,7 @@
-package com.digitaldad.user.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.user.enums.ContactVisible;
-import com.digitaldad.user.enums.UserStatus;
+import com.digitaldad.enums.ContactVisible;
+import com.digitaldad.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

@@ -1,6 +1,6 @@
-package com.digitaldad.user.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.user.enums.SmsScene;
+import com.digitaldad.enums.SmsScene;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

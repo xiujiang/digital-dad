@@ -1,7 +1,7 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.Project;
-import com.digitaldad.project.enums.ProjectStatus;
+import com.digitaldad.entity.Project;
+import com.digitaldad.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

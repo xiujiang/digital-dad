@@ -1,15 +1,15 @@
-package com.digitaldad.user.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.user.dto.*;
-import com.digitaldad.user.entity.User;
-import com.digitaldad.user.entity.UserQuota;
-import com.digitaldad.user.entity.UserRole;
-import com.digitaldad.user.enums.QuotaType;
-import com.digitaldad.user.enums.UserStatus;
-import com.digitaldad.user.repository.UserQuotaRepository;
-import com.digitaldad.user.repository.UserRepository;
-import com.digitaldad.user.repository.UserRoleRepository;
+import com.digitaldad.dto.*;
+import com.digitaldad.entity.User;
+import com.digitaldad.entity.UserQuota;
+import com.digitaldad.entity.UserRole;
+import com.digitaldad.enums.QuotaType;
+import com.digitaldad.enums.UserStatus;
+import com.digitaldad.repository.UserQuotaRepository;
+import com.digitaldad.repository.UserRepository;
+import com.digitaldad.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -147,7 +147,10 @@ public class AdminHostService {
             throw new BusinessException(400, "非主持人账号");
         }
 
-        UserStatus newStatus = UserStatus.valueOf(request.getStatus().toUpperCase());
+        UserStatus newStatus = parseStatus(request.getStatus());
+        if (newStatus == null) {
+            throw new BusinessException(400, "无效的状态值，仅支持 ENABLED / DISABLED");
+        }
         user.setStatus(newStatus);
         userRepository.save(user);
     }

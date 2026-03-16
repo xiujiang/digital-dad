@@ -1,9 +1,9 @@
-package com.digitaldad.ai.websocket;
+package com.digitaldad.websocket;
 
-import com.digitaldad.ai.service.SpeechTranscriptionQuotaService;
+import com.digitaldad.service.SpeechTranscriptionQuotaService;
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.user.security.UserPrincipal;
-import com.digitaldad.user.util.JwtUtils;
+import com.digitaldad.security.UserPrincipal;
+import com.digitaldad.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
@@ -25,6 +25,8 @@ import java.util.Map;
 public class SpeechRecognitionHandshakeInterceptor implements HandshakeInterceptor {
 
     private static final String TOKEN_PARAM = "token";
+    private static final String AUTH_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
     private static final String ATTR_USER_ID = "userId";
     private static final String ATTR_USER_ROLES = "userRoles";
 
@@ -37,9 +39,16 @@ public class SpeechRecognitionHandshakeInterceptor implements HandshakeIntercept
         if (!(request instanceof ServletServerHttpRequest servletRequest)) {
             return false;
         }
+        // 优先 URL 参数 ?token=xxx（部分 WebSocket 客户端无法自定义 Header）；其次 Authorization: Bearer xxx
         String token = servletRequest.getServletRequest().getParameter(TOKEN_PARAM);
         if (!StringUtils.hasText(token)) {
-            log.warn("语音识别 WebSocket 握手失败：缺少 token");
+            String auth = request.getHeaders().getFirst(AUTH_HEADER);
+            if (StringUtils.hasText(auth) && auth.startsWith(BEARER_PREFIX)) {
+                token = auth.substring(BEARER_PREFIX.length()).trim();
+            }
+        }
+        if (!StringUtils.hasText(token)) {
+            log.warn("语音识别 WebSocket 握手失败：缺少 token（请传 URL 参数 ?token= 或 Header Authorization: Bearer）");
             return false;
         }
 

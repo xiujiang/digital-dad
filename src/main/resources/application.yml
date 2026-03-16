@@ -1,6 +1,7 @@
 spring:
   application:
     name: digital-dad
+  # 服务器部署时建议设置 profiles.active=prod，以便按 info/warn/error 分文件写日志（见 logback-spring.xml）
 
   datasource:
     url: jdbc:mysql://101.34.64.224:3306/digital_dad?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
@@ -14,7 +15,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false   # 不在控制台输出 SQL，避免刷屏
     properties:
       hibernate:
         format_sql: true
@@ -24,7 +25,7 @@ spring:
 # JWT 配置
 jwt:
   secret: digital-dad-jwt-secret-key-at-least-256-bits-for-hs256
-  expiration-seconds: 86400  # 24小时
+  expiration-seconds: 604800  # 7天 (86400 * 7)
   header: Authorization
   prefix: "Bearer "
 
@@ -34,11 +35,14 @@ sms:
   send-interval-seconds: 60  # 60秒内不可重复获取
   # 腾讯云短信（配置 SecretId/SecretKey 后真实发送，未配置则仅打印日志。通过环境变量配置，勿提交敏感信息）
   tencent:
-    secret-id: ${TENCENT_SMS_SECRET_ID:1401093377}
-    secret-key: ${TENCENT_SMS_SECRET_KEY:875b38cb05fd9d1fb870bc30c2b9812a}
-    sdk-app-id: ${TENCENT_SMS_SDK_APP_ID:1401093377}
-    sign-name: ${TENCENT_SMS_SIGN_NAME:舟山市新城踏浪文化}
-    template-id: ${TENCENT_SMS_TEMPLATE_ID:2609865}
+    # 通过环境变量配置，勿提交真实密钥
+    secret-id: ${TENCENT_SMS_SECRET_ID:}
+    secret-key: ${TENCENT_SMS_SECRET_KEY:}
+    sdk-app-id: ${TENCENT_SMS_SDK_APP_ID:}
+    sign-name: ${TENCENT_SMS_SIGN_NAME:}
+    template-id: ${TENCENT_SMS_TEMPLATE_ID:}
+    # 模板参数个数：1=仅验证码，2=验证码+有效期(分钟)，需与腾讯云模板占位符一致
+    template-param-count: ${TENCENT_SMS_TEMPLATE_PARAM_COUNT:2}
     region: ${TENCENT_SMS_REGION:ap-guangzhou}
 
 # 应用配置
@@ -47,13 +51,15 @@ app:
   # 微信小程序（用于 C 端扫码登录：小程序将 code 发到后端，后端 code2session 换 openid 并签发 JWT）
   wechat:
     miniprogram:
+      # 通过环境变量配置，勿提交真实密钥
       app-id: ${WECHAT_MINI_APP_ID:}
       app-secret: ${WECHAT_MINI_APP_SECRET:}
   ai:
     enabled: ${APP_AI_ENABLED:true}  # 是否启用真实 AI，默认 true
   # DeepSeek 大模型（通过环境变量覆盖，勿提交敏感信息）
   deepseek:
-    api-key: ${DEEPSEEK_API_KEY:sk-6d007cb3e5b44932a98a9fb6b8374516}
+    # 通过环境变量配置，勿提交真实密钥
+    api-key: ${DEEPSEEK_API_KEY:}
     base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
     model: ${DEEPSEEK_MODEL:deepseek-chat}
   # 火山引擎语音识别（通过环境变量覆盖）

@@ -1,15 +1,15 @@
-package com.digitaldad.user.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.config.dto.MemberPackageConfigDto;
-import com.digitaldad.config.service.ConfigService;
-import com.digitaldad.user.entity.User;
-import com.digitaldad.user.entity.UserMember;
-import com.digitaldad.user.enums.MemberStatus;
-import com.digitaldad.user.enums.QuotaType;
-import com.digitaldad.user.repository.UserMemberRepository;
-import com.digitaldad.user.repository.UserRepository;
-import com.digitaldad.user.repository.UserRoleRepository;
+import com.digitaldad.dto.MemberPackageConfigDto;
+import com.digitaldad.service.ConfigService;
+import com.digitaldad.entity.User;
+import com.digitaldad.entity.UserMember;
+import com.digitaldad.enums.MemberStatus;
+import com.digitaldad.enums.QuotaType;
+import com.digitaldad.repository.UserMemberRepository;
+import com.digitaldad.repository.UserRepository;
+import com.digitaldad.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

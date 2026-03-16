@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS `sys_config` (
     UNIQUE KEY `uk_config_key` (`config_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置表';
 
--- 初始化：会员套餐配置
-INSERT INTO `sys_config` (`config_key`, `config_value`, `description`)
+-- 初始化：会员套餐配置（显式写入 created_at/updated_at 兼容无默认值的表结构）
+INSERT INTO `sys_config` (`config_key`, `config_value`, `description`, `created_at`, `updated_at`)
 VALUES (
     'member.packages',
     JSON_OBJECT(
@@ -31,5 +31,7 @@ VALUES (
             'valid_days', NULL
         )
     ),
-    '会员套餐配置：annual 年费会员、single 单次会员'
-) ON DUPLICATE KEY UPDATE `config_value` = VALUES(`config_value`), `description` = VALUES(`description`), `updated_at` = CURRENT_TIMESTAMP;
+    '会员套餐配置：annual 年费会员、single 单次会员',
+    NOW(),
+    NOW()
+) ON DUPLICATE KEY UPDATE `config_value` = VALUES(`config_value`), `description` = VALUES(`description`), `updated_at` = NOW();

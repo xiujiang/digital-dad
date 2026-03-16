@@ -1,6 +1,6 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.MaterialSnapshot;
+import com.digitaldad.entity.MaterialSnapshot;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

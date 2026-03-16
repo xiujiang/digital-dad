@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import jakarta.validation.constraints.Size;
 import lombok.Data;

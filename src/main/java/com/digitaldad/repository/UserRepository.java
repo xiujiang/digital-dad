@@ -1,7 +1,7 @@
-package com.digitaldad.user.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.user.entity.User;
-import com.digitaldad.user.enums.UserStatus;
+import com.digitaldad.entity.User;
+import com.digitaldad.enums.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

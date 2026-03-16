@@ -1,12 +1,12 @@
-package com.digitaldad.prompt.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.prompt.dto.*;
-import com.digitaldad.prompt.entity.Prompt;
-import com.digitaldad.prompt.enums.PromptContentType;
-import com.digitaldad.prompt.enums.PromptStatus;
-import com.digitaldad.prompt.repository.PromptRepository;
-import com.digitaldad.prompt.repository.PromptSceneItemRepository;
+import com.digitaldad.dto.*;
+import com.digitaldad.entity.Prompt;
+import com.digitaldad.enums.PromptContentType;
+import com.digitaldad.enums.PromptStatus;
+import com.digitaldad.repository.PromptRepository;
+import com.digitaldad.repository.PromptSceneItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

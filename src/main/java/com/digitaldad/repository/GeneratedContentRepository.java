@@ -1,7 +1,7 @@
-package com.digitaldad.project.repository;
+package com.digitaldad.repository;
 
-import com.digitaldad.project.entity.GeneratedContent;
-import com.digitaldad.project.enums.ContentType;
+import com.digitaldad.entity.GeneratedContent;
+import com.digitaldad.enums.ContentType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,7 +29,7 @@ public interface GeneratedContentRepository extends JpaRepository<GeneratedConte
             @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /** 待处理内容数（status = OUTDATED） */
-    long countByStatus(com.digitaldad.project.enums.ContentStatus status);
+    long countByStatus(com.digitaldad.enums.ContentStatus status);
 
     /** 管理员：分页列出全部交付物（仅项目未删除的） */
     @Query("SELECT g FROM GeneratedContent g WHERE EXISTS (SELECT 1 FROM Project p WHERE p.id = g.projectId AND p.deletedAt IS NULL)")

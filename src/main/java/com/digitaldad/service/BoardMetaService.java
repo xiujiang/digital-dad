@@ -1,10 +1,10 @@
-package com.digitaldad.board.service;
+package com.digitaldad.service;
 
 import com.digitaldad.common.exception.BusinessException;
-import com.digitaldad.board.dto.*;
-import com.digitaldad.board.entity.BoardMeta;
-import com.digitaldad.board.enums.BoardMetaStatus;
-import com.digitaldad.board.repository.BoardMetaRepository;
+import com.digitaldad.dto.*;
+import com.digitaldad.entity.BoardMeta;
+import com.digitaldad.enums.BoardMetaStatus;
+import com.digitaldad.repository.BoardMetaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

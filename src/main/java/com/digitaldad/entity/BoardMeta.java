@@ -1,6 +1,6 @@
-package com.digitaldad.board.entity;
+package com.digitaldad.entity;
 
-import com.digitaldad.board.enums.BoardMetaStatus;
+import com.digitaldad.enums.BoardMetaStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

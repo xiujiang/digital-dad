@@ -1,11 +1,11 @@
-package com.digitaldad.project.controller;
+package com.digitaldad.controller;
 
 import com.digitaldad.common.result.Result;
-import com.digitaldad.project.dto.*;
-import com.digitaldad.project.enums.ContentType;
-import com.digitaldad.project.service.DeliverableService;
-import com.digitaldad.project.service.ProjectService;
-import com.digitaldad.user.security.UserPrincipal;
+import com.digitaldad.dto.*;
+import com.digitaldad.enums.ContentType;
+import com.digitaldad.service.DeliverableService;
+import com.digitaldad.service.ProjectService;
+import com.digitaldad.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -51,6 +51,20 @@ public class ProjectController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateProjectRequest request) {
         return Result.ok(projectService.createProject(principal.getUserId(), request));
+    }
+
+    /**
+     * 更新项目：HOST 仅本人项目，SUPER_ADMIN 任意；仅更新请求中传入的字段
+     */
+    @PutMapping("/{id}")
+    public Result<?> updateProject(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectRequest request) {
+        if (principal.hasRole("SUPER_ADMIN")) {
+            return Result.ok(projectService.updateProjectForAdmin(id, request));
+        }
+        return Result.ok(projectService.updateProject(id, principal.getUserId(), request));
     }
 
     /**

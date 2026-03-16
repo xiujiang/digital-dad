@@ -1,4 +1,4 @@
-package com.digitaldad.project.dto;
+package com.digitaldad.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +20,8 @@ public class ProjectDetailResponse {
     private String brideName;
     private String theme;
     private LocalDate weddingDate;
+    /** 联系方式（与项目绑定） */
+    private String contactInfo;
     private String status;
     private String shareToken;
     private LocalDateTime createdAt;
